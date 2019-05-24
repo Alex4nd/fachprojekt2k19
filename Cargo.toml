@@ -5,3 +5,6 @@ authors = ["Conturing <13372078+Conturing@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
+bio = "*"
+bv = { version = "0.10", features = ["serde"]} 
+
