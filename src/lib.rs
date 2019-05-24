@@ -4,13 +4,40 @@ use bv::BitVec;
 use bv::BitsMut;
 
 
-struct PointerWaveletTree<T> {
-    e: T
+enum PointerWaveletTree<T> {
+    Node {
+        leftAlphabet: Vec<T>,
+        rightAlphabet: Vec<T>,
+        leftTree: Box<PointerWaveletTree<T>>,
+        rightTree: Box<PointerWaveletTree<T>>,
+        bits: BitVec<u8>,
+    },
+    Nil,
 }
 
 impl<T> PointerWaveletTree<T> {
 
-    fn new() {
+    fn new(capacity: u64) -> PointerWaveletTree<T> {
+        PointerWaveletTree::Node {
+            leftAlphabet: Vec::new(),
+            rightAlphabet: Vec::new(),
+            leftTree: Box::new(PointerWaveletTree::Nil),
+            rightTree: Box::new(PointerWaveletTree::Nil),
+            bits: BitVec::new_fill(false, capacity)
+        }
+    }
+
+    fn new_fill(data: Vec<T>) -> PointerWaveletTree<T> {
+        PointerWaveletTree::Node {
+            leftAlphabet: Vec::new(),
+            rightAlphabet: Vec::new(),
+            leftTree: Box::new(PointerWaveletTree::Nil),
+            rightTree: Box::new(PointerWaveletTree::Nil),
+            bits: BitVec::new_fill(false, capacity)
+        }
+    }
+
+    fn fill_rec(alphabet: Vec<T>, sequence: Vec<T>) -> PointerWaveletTree<T> {
     }
 }
 
@@ -44,9 +71,12 @@ trait WaveletTree<T> {
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+
     #[test]
     fn access() {
-    
+         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new(64);
+         tree.access(5)
     }
 
     #[test]
