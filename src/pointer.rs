@@ -66,23 +66,21 @@ impl<T: Ord + PartialEq + Clone> PointerWaveletTree<T> {
 impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
     fn access(&self, index: u32) -> T{
-        let bit = bits[index];
-        if (bit == true){
-            if(rightAlphabet.len() == 1)
-                rightAlphabet[0];
-            else
-                let rs = RankSelect::new(bits,1);
-                let ranked = rs.rank(index);
-                rightTree.access(ranked);
-                
+        if(minChar == maxChar){
+            minChar
         }
         else{
-            if(leftAlphabet.len() == 1)
-                leftAlphabet[0];
-            else
+            if(bits[index] == true){
                 let rs = RankSelect::new(bits,1);
-                let ranked = index - rs.rank(index);
-                leftTree.access(ranked);
+                let rank = rs.rank(index);
+                rightTree.access(rank);
+                
+            }
+            else{
+                let rs = RankSelect::new(bits,1);
+                let rank = index - rs.rank(index)
+                leftTree.access(rank)
+            }
         }
         
     }
