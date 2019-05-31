@@ -64,16 +64,19 @@ impl<T: Ord + PartialEq + Clone> PointerWaveletTree<T> {
 
 impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
-    fn access(&self, index: u32) {
+    fn access(&self, index: u32) -> Option<T>{
     
+	return Option::None;
     }
 
-    fn rank(&self, element: T, index: u32) {
+    fn rank(&self, element: T, index: u32) -> u32{
     
+	return 42;
     }
 
-    fn select(&self, element: T, index: u32) {
+    fn select(&self, element: T, index: u32) -> u32{
     
+	return 42;
     }
 }
 
