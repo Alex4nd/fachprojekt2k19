@@ -119,7 +119,7 @@ mod tests {
 	data.push(String::from("Daria"));
 	data.push(String::from("Elena"));
         let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(&data[..]);
-        let content: String = tree.access(6);
+        let content = tree.access(6);
 	assert_eq!(content, Option::None);
     }
 
