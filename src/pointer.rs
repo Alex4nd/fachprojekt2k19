@@ -8,61 +8,63 @@ use crate::traits::WaveletTree;
 
 // use std::convert::TryFrom;
 
-enum PointerWaveletTree<T> {
+pub struct PointerWaveletTree<'a, T> {
+    alphabet: Vec<T>,
+    root: Option<PointerWaveletTreeNode<'a, T>>,
+}
+
+enum PointerWaveletTreeNode<'a, T> {
     Node {
-        leftAlphabet: Vec<T>,
-        rightAlphabet: Vec<T>,
-        leftTree: Box<PointerWaveletTree<T>>,
-        rightTree: Box<PointerWaveletTree<T>>,
+        minElement: &'a T,
+        maxElement: &'a T,
+        leftTree: Box<PointerWaveletTreeNode<'a, T>>,
+        rightTree: Box<PointerWaveletTreeNode<'a, T>>,
         bits: BitVec<u8>,
     },
     Nil,
 }
 
-impl<T: Ord + PartialEq + Clone> PointerWaveletTree<T> {
+impl<'a, T: Ord + PartialEq + Clone> PointerWaveletTree<'a, T> {
 
-    fn new(capacity: u64) -> PointerWaveletTree<T> {
-        PointerWaveletTree::Node {
-            leftAlphabet: Vec::new(),
-            rightAlphabet: Vec::new(),
-            leftTree: Box::new(PointerWaveletTree::Nil),
-            rightTree: Box::new(PointerWaveletTree::Nil),
-            bits: BitVec::new_fill(false, capacity)
-        }
-    }
-
-    fn new_fill(data: Vec<T>) -> PointerWaveletTree<T> {
+    pub fn new_fill(data: &[T]) -> PointerWaveletTree<'a, T> {
         let mut alphabet: Vec<T> = Vec::new();
         for elem in data.iter() {
             let mut found = false; 
             for alph in alphabet.iter() {
-                if (elem == alph) {
+                if elem == alph {
                     found = true;
                     break;
                 }
             } 
-            if (!found) {
+            if !found {
                 alphabet.push(Clone::clone(elem));
             }
         }
         alphabet.sort();
-        let rightAlphabet = alphabet.split_off(alphabet.len()/2);
-        let leftAlphabet = alphabet;
-        PointerWaveletTree::Node {
-            leftTree: Box::new(PointerWaveletTree::fill_rec(Clone::clone(&leftAlphabet), &data)),
-            rightTree: Box::new(PointerWaveletTree::fill_rec(Clone::clone(&rightAlphabet),&data)),
-            rightAlphabet,
-            leftAlphabet,
-            bits: BitVec::new_fill(false, 32), //u64::try_from(data.len()).unwrap());
-        }
+        PointerWaveletTree {
+            alphabet: alphabet,
+            root: Option::None,
+        } 
     }
 
-    fn fill_rec(alphabet: Vec<T>, sequence: &Vec<T>) -> PointerWaveletTree<T> {
-        PointerWaveletTree::Nil
+    fn fill_rec(alphabet: &'a [T], sequence: &[T]) -> PointerWaveletTreeNode<'a, T> {
+        if alphabet.len() > 1 {
+            PointerWaveletTreeNode::Node {
+                leftTree: Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence)),
+                rightTree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..],&sequence)),
+                minElement: &alphabet[0],
+                maxElement: &alphabet[alphabet.len() - 1],
+                bits: BitVec::new_fill(false, 32), //u64::try_from(data.len()).unwrap());
+            }
+        } else {
+            PointerWaveletTreeNode::Nil 
+        }
     }
 }
 
-impl<T> WaveletTree<T> for PointerWaveletTree<T> {
+
+
+impl<'a, T> WaveletTree<T> for PointerWaveletTree<'a, T> {
 
     fn access(&self, index: u32) -> Option<T>{
     
@@ -98,9 +100,10 @@ mod tests {
 	data.push(String::from("Connor"));
 	data.push(String::from("Daria"));
 	data.push(String::from("Elena"));
-        let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(data);
-        let content: String = tree.access(4);
-	assert_eq!(content.unwrap(), String::from("Daria"));
+
+        let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(&data[..]);
+        let content: String = tree.access(4).unwrap();
+	assert_eq!(content, String::from("Daria"));
     }
 
     //Tests the function access with an invalid position
@@ -115,7 +118,7 @@ mod tests {
 	data.push(String::from("Connor"));
 	data.push(String::from("Daria"));
 	data.push(String::from("Elena"));
-        let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(&data[..]);
         let content: String = tree.access(6);
 	assert_eq!(content, Option::None);
     }
@@ -131,7 +134,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 5);
 	assert_eq!(3, content);
     }
@@ -146,7 +149,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(42, 5);
 	assert_eq!(0, content);
     }
@@ -163,7 +166,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 42);
 	assert_eq!(3, content);
     }
@@ -180,7 +183,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 0);
 	assert_eq!(0, content);
     }
@@ -196,7 +199,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(0, 2);
 	assert_eq!(4, content);
     }
@@ -213,7 +216,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(42, 1);
 	assert_eq!(0, content);
     }
@@ -230,7 +233,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(42, 1);
 	assert_eq!(0, content);
     }
@@ -247,7 +250,7 @@ mod tests {
 	data.push(1);
 	data.push(0);
 	data.push(1);
-        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(1, 0);
 	assert_eq!(0, content);
     }
