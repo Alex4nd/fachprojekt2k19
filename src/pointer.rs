@@ -3,6 +3,7 @@ use bio::data_structures::rank_select::RankSelect;
 use bv::BitVec;
 use bv::BitsMut;
 
+
 // use crate::traits;
 use crate::traits::WaveletTree;
 
@@ -64,12 +65,30 @@ impl<T: Ord + PartialEq + Clone> PointerWaveletTree<T> {
 
 impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
-    fn access(&self, index: u32) {
-    
+    fn access(&self, index: u32) -> T{
+        let bit = bits[index];
+        if (bit == true){
+            if(rightAlphabet.len() == 1)
+                rightAlphabet[0];
+            else
+                let rs = RankSelect::new(bits,1);
+                let ranked = rs.rank(index);
+                rightTree.access(ranked);
+                
+        }
+        else{
+            if(leftAlphabet.len() == 1)
+                leftAlphabet[0];
+            else
+                let rs = RankSelect::new(bits,1);
+                let ranked = index - rs.rank(index);
+                leftTree.access(ranked);
+        }
+        
     }
 
     fn rank(&self, element: T, index: u32) {
-    
+        
     }
 
     fn select(&self, element: T, index: u32) {
