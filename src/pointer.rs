@@ -89,18 +89,41 @@ mod tests {
 
     #[test]
     fn access() {
-         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new(64);
-         tree.access(5)
+	let mut data: Vec<String> = Vec::new();
+	data.push(String::from("Albert"));
+	data.push(String::from("Bernd"));
+	data.push(String::from("Connor"));
+	data.push(String::from("Daria"));
+	data.push(String::from("Elena"));
+        let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(data);
+        let content: String = tree.access(4).unwrap();
+	assert_eq!(content, String::from("Daria"));
     }
 
     #[test]
     fn rank() {
-    
+	let mut data: Vec<u32> = Vec::new();
+    	data.push(1);
+	data.push(0);
+	data.push(1);
+	data.push(0);
+	data.push(1);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let content: u32 = tree.rank(1, 5);
+	assert_eq!(3, content);
     }
 
     #[test]
     fn select() {
-    
+	let mut data: Vec<u32> = Vec::new();
+    	data.push(1);
+	data.push(0);
+	data.push(1);
+	data.push(0);
+	data.push(1);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(data);
+        let content: u32 = tree.select(0, 2);
+	assert_eq!(4, content);
     }
 }
 
