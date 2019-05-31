@@ -5,7 +5,7 @@ use bv::BitsMut;
 
 
 struct PointerWaveletTree<T> {
-    e: T
+    
 }
 
 impl<T> PointerWaveletTree<T> {
