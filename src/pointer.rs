@@ -15,15 +15,12 @@ pub struct PointerWaveletTree<T> {
 }
 
 #[derive(Debug, PartialEq)]
-enum PointerWaveletTreeNode<T> {
-    Node {
+struct PointerWaveletTreeNode<T> {
         min_element: T,
         max_element: T,
-        left_tree: Box<PointerWaveletTreeNode<T>>,
-        right_tree: Box<PointerWaveletTreeNode<T>>,
+        left_tree: Option<Box<PointerWaveletTreeNode<T>>>,
+        right_tree: Option<Box<PointerWaveletTreeNode<T>>>,
         bits: BitVec<u8>,
-    },
-    Nil,
 }
 
 impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
@@ -75,17 +72,17 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
                 }
             }
 
-            PointerWaveletTreeNode::Node {
-                left_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence)),
-                right_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence)),
+            PointerWaveletTreeNode{
+                left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence))),
+                right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence))),
                 min_element: Clone::clone(&alphabet[0]),
                 max_element: Clone::clone(&alphabet[alphabet.len() - 1]),
                 bits, //u64::try_from(data.len()).unwrap());
             }
         } else {
-            PointerWaveletTreeNode::Node {
-                left_tree: Box::new(PointerWaveletTreeNode::Nil),
-                right_tree: Box::new(PointerWaveletTreeNode::Nil),
+            PointerWaveletTreeNode{
+                left_tree: Option::None,
+                right_tree: Option::None,
                 min_element: Clone::clone(&alphabet[0]),
                 max_element: Clone::clone(&alphabet[0]),
                 bits: BitVec::new(),
@@ -139,8 +136,8 @@ mod tests {
     fn creation_empty_data(){
 	let mut data: Vec<u32> = Vec::new();
 	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-	let empty_node = PointerWaveletTreeNode::Nil;
-	assert_eq!(tree.root.unwrap(), empty_node);
+	let empty_node = Option::None;
+	assert_eq!(tree.root, empty_node);
     }
 
     //Tests if the creation with non-empty data is functional
@@ -158,10 +155,7 @@ mod tests {
 	test_bits.set_bit(0 as u64, true);
 	test_bits.set_bit(2 as u64, true);
 	test_bits.set_bit(4 as u64, true);
-	if let PointerWaveletTreeNode::Node{min_element, max_element, left_tree, right_tree, bits} = tree.root.unwrap() {
-	    assert_eq!(bits, test_bits);
-	}
-	else {assert_eq!(0, 1);}
+	assert_eq!(tree.root.unwrap().bits, test_bits);
     }
 
     //The position index of the elements in the wavelet tree is assumed to begin at 0
