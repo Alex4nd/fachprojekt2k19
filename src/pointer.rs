@@ -6,6 +6,9 @@ use bv::BitsMut;
 use std::ops::{Add, Div};
 // use std::convert::TryFrom;
 
+use std::fmt::Display;
+use std::fmt::Debug;
+
 use crate::traits::WaveletTree;
 
 
@@ -25,7 +28,7 @@ enum PointerWaveletTreeNode<T> {
     Nil,
 }
 
-impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTree<T> {
 
     pub fn new_fill(data: &[T]) -> PointerWaveletTree<T> {
         let mut alphabet: Vec<T> = Vec::new();
@@ -54,29 +57,34 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
     }
 
     fn fill_rec(alphabet: &[T], sequence: &[T]) -> PointerWaveletTreeNode<T> {
+        println!("recusrive tree fill with \n\talphabet {:?}... (len: {}) and \n\tsequence {:?}... (len: {})", alphabet, alphabet.len(), sequence, sequence.len());
+        
+        
         if alphabet.len() > 1 {
             
-            let mut bits: BitVec<u8> = BitVec::new_fill(false, 32);
+            let mut bits: BitVec<u8> = BitVec::new_fill(false, sequence.len() as u64);
 
+            let mut length = 0;
             for elem in sequence.iter() {
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
                     if elem == alph {
-                        if position <= alphabet.len()/2 {
-                            bits.set_bit(position as u64, false);
+                        if position < alphabet.len()/2 {
+                            bits.set_bit(length, false);
                         }
                         else {
-                            bits.set_bit(position as u64, true);
+                            bits.set_bit(length, true);
                         }
                         break;
                     }
                     position += 1;
                 }
+                length += 1;
             }
 
             PointerWaveletTreeNode::Node {
                 left_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence)),
-                right_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence)),
+                right_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 ..], &sequence)),
                 min_element: Clone::clone(&alphabet[0]),
                 max_element: Clone::clone(&alphabet[alphabet.len() - 1]),
                 bits, //u64::try_from(data.len()).unwrap());
@@ -120,6 +128,48 @@ mod tests {
     //The position index of the elements in the wavelet tree is assumed to begin at 0
     use super::*;
     use crate::traits::WaveletTree;
+
+
+    #[test]
+    fn constructor_alphabet() {
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        
+        let tree = PointerWaveletTree::new_fill(&data);
+   
+        assert!(tree.alphabet.len() == 6);
+    }
+
+    #[test]
+    fn constructor_data() {
+        // aiabar a ia aiabarda
+        // 14121501041014121531
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        
+        let tree = PointerWaveletTree::new_fill(&data);
+   
+        assert!(tree.root.is_some());
+        let node = tree.root.unwrap();
+        // let node = node as PointerWaveletTreeNode::Node;
+        match node {
+            PointerWaveletTreeNode::Node { min_element, max_element, left_tree, right_tree, mut bits } => {
+                println!("{:?}", bits);
+
+                let bit_pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0);
+                let mut i = 0;
+                for bit in bit_pattern.iter() {
+                    println!("bit {} should be {}", i, *bit);
+                    assert_eq!(bits.get(i), (*bit == 1));
+                    i += 1;
+                }
+
+
+
+
+            }
+            Nil => {panic!();}
+        }
+    }
+
 
     //Tests the function access with valid parameters.
     //The object at the given index 3 does exist in the wavelet-tree, so the expected output is this object
