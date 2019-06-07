@@ -8,12 +8,12 @@ use std::ops::{Add, Div};
 
 use crate::traits::WaveletTree;
 
-
+#[derive(Debug)]
 pub struct PointerWaveletTree<'a, T> {
     alphabet: Vec<T>,
     root: Option<PointerWaveletTreeNode<'a, T>>,
 }
-
+#[derive(Debug, PartialEq)]
 enum PointerWaveletTreeNode<'a, T> {
     Node {
         minElement: &'a T,
@@ -25,7 +25,7 @@ enum PointerWaveletTreeNode<'a, T> {
     Nil,
 }
 
-impl<'a, T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<'a, T> {
+impl<'a, T: Ord + PartialEq + Clone + Add + Div> PointerWaveletTree<'a, T> {
 
     pub fn new_fill(data: &[T]) -> PointerWaveletTree<'a, T> {
         let mut alphabet: Vec<T> = Vec::new();
@@ -87,7 +87,7 @@ impl<'a, T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<'a, T> {
                 minElement: &alphabet[0],
                 maxElement: &alphabet[0],
                 bits: BitVec::new(),
-            } 
+            }
         }
     }
 }
@@ -115,25 +115,61 @@ impl<'a, T> WaveletTree<T> for PointerWaveletTree<'a, T> {
 
 #[cfg(test)]
 mod tests {
-
-    //The position index of the elements in the wavelet tree is assumed to begin at 0
     use super::*;
     use crate::traits::WaveletTree;
+
+    //Tests the compatibility with the primitive T = char
+    #[test]
+    fn char_compatibility(){
+	//todo
+	assert_eq!(0, 1); //reminder
+    }
+
+    //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
+    #[test]
+    fn creation_empty_data(){
+	let mut data: Vec<u32> = Vec::new();
+	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+	let empty_node = PointerWaveletTreeNode::Nil;
+	assert_eq!(tree.root.unwrap(), empty_node);
+    }
+
+    //Tests if the creation with non-empty data is functional
+    //specifically, if the bit vector is initialized correctly
+    #[test]
+    fn creation_non_empty_data(){
+	let mut data: Vec<u32> = Vec::new();
+        data.push(4);
+        data.push(2);
+        data.push(4);
+        data.push(2);
+        data.push(4);
+	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+	let mut test_bits = BitVec::new_fill(false, 32);
+	test_bits.set_bit(0 as u64, true);
+	test_bits.set_bit(2 as u64, true);
+	test_bits.set_bit(4 as u64, true);
+	if let PointerWaveletTreeNode::Node{minElement, maxElement, leftTree, rightTree, bits} = tree.root.unwrap(){
+	    assert_eq!(bits, test_bits);
+	}
+	else {assert_eq!(0, 1);}
+    }
+
+    //The position index of the elements in the wavelet tree is assumed to begin at 0
 
     //Tests the function access with valid parameters.
     //The object at the given index 3 does exist in the wavelet-tree, so the expected output is this object
     #[test]
     fn access_success() {
-        // let mut data: Vec<String> = Vec::new();
-        // data.push(String::from("Albert"));
-        // data.push(String::from("Bernd"));
-        // data.push(String::from("Connor"));
-        // data.push(String::from("Daria"));
-        // data.push(String::from("Elena"));
-
-        // let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(&data[..]);
-        // let content: String = tree.access(3).unwrap();
-        // assert_eq!(content, String::from("Daria"));
+        let mut data: Vec<u32> = Vec::new();
+        data.push(1);
+        data.push(0);
+        data.push(1);
+        data.push(0);
+        data.push(1);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+        let content = tree.access(3).unwrap();
+        assert_eq!(content, 0);
     }
 
     //Tests the function access with an invalid position
@@ -141,15 +177,15 @@ mod tests {
     //to indicate the nonexistence of the object at this position
     #[test]
     fn access_invalid_position() {
-        // let mut data: Vec<String> = Vec::new();
-        // data.push(String::from("Albert"));
-        // data.push(String::from("Bernd"));
-        // data.push(String::from("Connor"));
-        // data.push(String::from("Daria"));
-        // data.push(String::from("Elena"));
-        // let tree: PointerWaveletTree<String> = PointerWaveletTree::new_fill(&data[..]);
-        // let content = tree.access(5);
-        // assert_eq!(content, Option::None);
+        let mut data: Vec<u32> = Vec::new();
+        data.push(1);
+        data.push(0);
+        data.push(1);
+        data.push(0);
+        data.push(1);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+        let content = tree.access(5);
+        assert_eq!(content, Option::None);
     }
 
     //Tests the function rank with valid parameters
