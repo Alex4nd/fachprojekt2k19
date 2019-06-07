@@ -8,26 +8,27 @@ use std::ops::{Add, Div};
 
 use crate::traits::WaveletTree;
 
-#[derive(Debug)]
-pub struct PointerWaveletTree<'a, T> {
+
+pub struct PointerWaveletTree<T> {
     alphabet: Vec<T>,
-    root: Option<PointerWaveletTreeNode<'a, T>>,
+    root: Option<PointerWaveletTreeNode<T>>,
 }
+
 #[derive(Debug, PartialEq)]
-enum PointerWaveletTreeNode<'a, T> {
+enum PointerWaveletTreeNode<T> {
     Node {
-        minElement: &'a T,
-        maxElement: &'a T,
-        leftTree: Box<PointerWaveletTreeNode<'a, T>>,
-        rightTree: Box<PointerWaveletTreeNode<'a, T>>,
+        min_element: T,
+        max_element: T,
+        left_tree: Box<PointerWaveletTreeNode<T>>,
+        right_tree: Box<PointerWaveletTreeNode<T>>,
         bits: BitVec<u8>,
     },
     Nil,
 }
 
-impl<'a, T: Ord + PartialEq + Clone + Add + Div> PointerWaveletTree<'a, T> {
+impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
 
-    pub fn new_fill(data: &[T]) -> PointerWaveletTree<'a, T> {
+    pub fn new_fill(data: &[T]) -> PointerWaveletTree<T> {
         let mut alphabet: Vec<T> = Vec::new();
         for elem in data.iter() {
             let mut found = false; 
@@ -42,26 +43,26 @@ impl<'a, T: Ord + PartialEq + Clone + Add + Div> PointerWaveletTree<'a, T> {
             }
         }
         alphabet.sort();
-        let tree = PointerWaveletTree {
+        let size = alphabet.len();
+        let mut tree = PointerWaveletTree {
             alphabet: alphabet,
             root: Option::None,
         }; 
-        PointerWaveletTree::fill_rec(&tree.alphabet[..], data);
+        if size > 0 {
+            tree.root = Some(PointerWaveletTree::fill_rec(&tree.alphabet[..], data));
+        }
         tree
     }
 
-    fn fill_rec(alphabet: &'a [T], sequence: &[T]) -> PointerWaveletTreeNode<'a, T> {
+    fn fill_rec(alphabet: &[T], sequence: &[T]) -> PointerWaveletTreeNode<T> {
         if alphabet.len() > 1 {
             
             let mut bits: BitVec<u8> = BitVec::new_fill(false, 32);
 
-            let mut length: usize = 0;
             for elem in sequence.iter() {
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
-                    position += 1;
                     if elem == alph {
-                        length += 1;
                         if position <= alphabet.len()/2 {
                             bits.set_bit(position as u64, false);
                         }
@@ -70,22 +71,23 @@ impl<'a, T: Ord + PartialEq + Clone + Add + Div> PointerWaveletTree<'a, T> {
                         }
                         break;
                     }
+                    position += 1;
                 }
             }
 
             PointerWaveletTreeNode::Node {
-                leftTree: Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence)),
-                rightTree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence)),
-                minElement: &alphabet[0],
-                maxElement: &alphabet[alphabet.len() - 1],
+                left_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence)),
+                right_tree: Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence)),
+                min_element: Clone::clone(&alphabet[0]),
+                max_element: Clone::clone(&alphabet[alphabet.len() - 1]),
                 bits, //u64::try_from(data.len()).unwrap());
             }
         } else {
             PointerWaveletTreeNode::Node {
-                leftTree: Box::new(PointerWaveletTreeNode::Nil),
-                rightTree: Box::new(PointerWaveletTreeNode::Nil),
-                minElement: &alphabet[0],
-                maxElement: &alphabet[0],
+                left_tree: Box::new(PointerWaveletTreeNode::Nil),
+                right_tree: Box::new(PointerWaveletTreeNode::Nil),
+                min_element: Clone::clone(&alphabet[0]),
+                max_element: Clone::clone(&alphabet[0]),
                 bits: BitVec::new(),
             }
         }
@@ -94,7 +96,7 @@ impl<'a, T: Ord + PartialEq + Clone + Add + Div> PointerWaveletTree<'a, T> {
 
 
 
-impl<'a, T> WaveletTree<T> for PointerWaveletTree<'a, T> {
+impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
     fn access(&self, index: u32) -> Option<T>{
     
@@ -118,11 +120,18 @@ mod tests {
     use super::*;
     use crate::traits::WaveletTree;
 
-    //Tests the compatibility with the primitive T = char
+    //Tests the compatibility with the primitive T = u8 as a char representation
     #[test]
     fn char_compatibility(){
-	//todo
-	assert_eq!(0, 1); //reminder
+	let mut data: Vec<u8> = Vec::new();
+        data.push(b'a');
+        data.push(b'b');
+        data.push(b'c');
+        data.push(b'd');
+        data.push(b'e');
+        let tree: PointerWaveletTree<u8> = PointerWaveletTree::new_fill(&data[..]);
+        let content = tree.access(3).unwrap();
+        assert_eq!(content, b'd');
     }
 
     //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
@@ -149,7 +158,7 @@ mod tests {
 	test_bits.set_bit(0 as u64, true);
 	test_bits.set_bit(2 as u64, true);
 	test_bits.set_bit(4 as u64, true);
-	if let PointerWaveletTreeNode::Node{minElement, maxElement, leftTree, rightTree, bits} = tree.root.unwrap(){
+	if let PointerWaveletTreeNode::Node{min_element, max_element, left_tree, right_tree, bits} = tree.root.unwrap() {
 	    assert_eq!(bits, test_bits);
 	}
 	else {assert_eq!(0, 1);}
