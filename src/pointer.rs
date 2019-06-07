@@ -6,6 +6,9 @@ use bv::BitsMut;
 use std::ops::{Add, Div};
 // use std::convert::TryFrom;
 
+use std::fmt::Display;
+use std::fmt::Debug;
+
 use crate::traits::WaveletTree;
 
 
@@ -23,7 +26,7 @@ struct PointerWaveletTreeNode<T> {
         bits: BitVec<u8>,
 }
 
-impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTree<T> {
 
     pub fn new_fill(data: &[T]) -> PointerWaveletTree<T> {
         let mut alphabet: Vec<T> = Vec::new();
@@ -52,29 +55,37 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
     }
 
     fn fill_rec(alphabet: &[T], sequence: &[T]) -> PointerWaveletTreeNode<T> {
+        println!("recusrive tree fill with \n\talphabet {:?} (len: {})", alphabet, alphabet.len());
+        
+        
         if alphabet.len() > 1 {
-            collections
-            let mut bits: BitVec<u8> = BitVec::new_fill(false, 32);
+            
+            let mut bits: BitVec<u8> = BitVec::new_fill(false, sequence.len() as u64);
 
+            let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
+
+            let mut length = 0;
             for elem in sequence.iter() {
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
                     if elem == alph {
-                        if position <= alphabet.len()/2 {
-                            bits.set_bit(position as u64, false);
+                        println!("Symbol {} at index {} is in alphabet {:?} -> {}", elem, length, alphabet, position >= middle);
+                        if position < middle {
+                            bits.set_bit(length, false);
                         }
                         else {
-                            bits.set_bit(position as u64, true);
+                            bits.set_bit(length, true);
                         }
+                        length += 1;
                         break;
                     }
                     position += 1;
                 }
             }
-
-            PointerWaveletTreeNode{
-                left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[..alphabet.len()/2], &sequence))),
-                right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[alphabet.len()/2 + 1 ..], &sequence))),
+            
+            PointerWaveletTreeNode {
+                left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. middle], &sequence))),
+                right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[middle ..], &sequence))),
                 min_element: Clone::clone(&alphabet[0]),
                 max_element: Clone::clone(&alphabet[alphabet.len() - 1]),
                 bits, //u64::try_from(data.len()).unwrap());
@@ -130,6 +141,54 @@ impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 mod tests {
     use super::*;
     use crate::traits::WaveletTree;
+
+    #[test]
+    fn constructor_alphabet() {
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        
+        let tree = PointerWaveletTree::new_fill(&data);
+   
+        assert!(tree.alphabet.len() == 6);
+    }
+
+    #[test]
+    fn constructor_data() {
+        // aiabar a ia aiabarda
+        // 14121501041014121531
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        
+        let tree = PointerWaveletTree::new_fill(&data);
+   
+        assert!(tree.root.is_some());
+        let mut node = tree.root.unwrap();
+        // let node = node as PointerWaveletTreeNode::Node;
+
+        let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0);
+        bit_pattern(&mut node, &pattern);
+
+        assert!(node.left_tree.is_some());
+        let mut nodeL = node.left_tree.unwrap();
+       
+        let pattern = vec!(0,0,1,0,0,0,0,0,0,0,0,1,0,0);
+        bit_pattern(&mut nodeL, &pattern);
+
+        assert!(node.right_tree.is_some());
+        let mut nodeR = node.right_tree.unwrap();
+       
+        let pattern = vec!(0,1,0,0,1,0);
+        bit_pattern(&mut nodeR, &pattern);
+        
+    }
+
+    fn bit_pattern<T: Display>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>) {
+        println!("Bitvec: {:?}", node.bits);
+        let mut i = 0;
+        for bit in pattern.iter() {
+            assert_eq!(node.bits.get(i), *bit == 1, "Bit {} should be {} since symbol {} is (not) in alphabet {}-{}.", i, *bit, 'x', node.min_element, node.max_element);
+            i += 1;
+        }
+    
+    }
 
     //Tests the compatibility with the primitive T = u8 as a char representation
     #[test]
