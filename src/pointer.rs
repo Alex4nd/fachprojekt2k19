@@ -53,7 +53,7 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
 
     fn fill_rec(alphabet: &[T], sequence: &[T]) -> PointerWaveletTreeNode<T> {
         if alphabet.len() > 1 {
-            
+            collections
             let mut bits: BitVec<u8> = BitVec::new_fill(false, 32);
 
             for elem in sequence.iter() {
@@ -88,6 +88,20 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerWaveletTree<T> {
                 bits: BitVec::new(),
             }
         }
+    }
+
+    pub fn level_order_bits(&self) -> BitVec<u8> {
+        let mut result: BitVec<u8> = BitVec::new();
+        let tree = &self.root;
+        match tree {
+            Option::None => {}
+            Option::Some(_) => {
+                for bit in tree.unwrap().bits.iter(){
+                    result.unwrap().push(bit);
+                }
+            }
+        }
+        result
     }
 }
 
