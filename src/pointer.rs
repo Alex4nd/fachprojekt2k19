@@ -60,7 +60,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         
         if alphabet.len() > 1 {
             
-            let mut bits: BitVec<u8> = BitVec::new_fill(false, sequence.len() as u64);
+            let mut bits: BitVec<u8> = BitVec::new();
 
             let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
 
@@ -71,10 +71,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
                     if elem == alph {
                         println!("Symbol {} at index {} is in alphabet {:?} -> {}", elem, length, alphabet, position >= middle);
                         if position < middle {
-                            bits.set_bit(length, false);
+                            bits.push(false);
                         }
                         else {
-                            bits.set_bit(length, true);
+                            bits.push(true);
                         }
                         length += 1;
                         break;
@@ -101,19 +101,19 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         }
     }
 
-    pub fn level_order_bits(&self) -> BitVec<u8> {
-        let mut result: BitVec<u8> = BitVec::new();
-        let tree = &self.root;
-        match tree {
-            Option::None => {}
-            Option::Some(_) => {
-                for bit in tree.unwrap().bits.iter(){
-                    result.unwrap().push(bit);
-                }
-            }
-        }
-        result
-    }
+    // pub fn level_order_bits(&self) -> BitVec<u8> {
+    //     let mut result: BitVec<u8> = BitVec::new();
+    //     let tree = &self.root;
+    //     match tree {
+    //         Option::None => {}
+    //         Option::Some(_) => {
+    //             for bit in tree.unwrap().bits.iter(){
+    //                 result.unwrap().push(bit);
+    //             }
+    //         }
+    //     }
+    //     result
+    // }
 }
 
 
@@ -157,32 +157,81 @@ mod tests {
         // 14121501041014121531
         let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
         
-        let tree = PointerWaveletTree::new_fill(&data);
+        let mut tree = PointerWaveletTree::new_fill(&data);
    
         assert!(tree.root.is_some());
-        let mut node = tree.root.unwrap();
-        // let node = node as PointerWaveletTreeNode::Node;
 
         let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0);
-        bit_pattern(&mut node, &pattern);
+		assert_node(tree_traversal(&mut tree, "."), &pattern, &0, &5);
 
-        assert!(node.left_tree.is_some());
-        let mut nodeL = node.left_tree.unwrap();
-       
         let pattern = vec!(0,0,1,0,0,0,0,0,0,0,0,1,0,0);
-        bit_pattern(&mut nodeL, &pattern);
+		assert_node(tree_traversal(&mut tree, "l"), &pattern, &0, &2);
 
-        assert!(node.right_tree.is_some());
-        let mut nodeR = node.right_tree.unwrap();
-       
+        let pattern = vec!(1,1,1,0,1,0,1,0,1,1,1,1);
+		assert_node(tree_traversal(&mut tree, "ll"), &pattern, &0, &1);
+
+		assert_leaf(tree_traversal(&mut tree, "lll"), &0);
+		assert_leaf(tree_traversal(&mut tree, "llr"), &1);
+		assert_leaf(tree_traversal(&mut tree, "lr"), &2);
+
         let pattern = vec!(0,1,0,0,1,0);
-        bit_pattern(&mut nodeR, &pattern);
-        
+		assert_node(tree_traversal(&mut tree, "r"), &pattern, &3, &5);
+
+        let pattern = vec!(1,1,1,0);
+		assert_node(tree_traversal(&mut tree, "rl"), &pattern, &3, &4);
+
+		assert_leaf(tree_traversal(&mut tree, "rll"), &3);
+		assert_leaf(tree_traversal(&mut tree, "rlr"), &4);
+		assert_leaf(tree_traversal(&mut tree, "rr"), &5);
     }
 
-    fn bit_pattern<T: Display>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>) {
+    fn tree_traversal<'a, T: PartialEq + Debug>(tree: &'a mut PointerWaveletTree<T>, path: &str) -> &'a mut PointerWaveletTreeNode<T> {
+
+		use std::borrow::BorrowMut;
+
+        assert!(path.is_ascii());
+		assert!(tree.root.is_some());
+        let mut rv: &mut PointerWaveletTreeNode<T> = tree.root.as_mut().unwrap();
+        for c in path.chars() {
+            if c == 'l' {
+                assert!(rv.left_tree.is_some());
+                rv = rv.left_tree.as_mut().unwrap().borrow_mut();
+            }
+            else if c == 'r' {
+                assert!(rv.right_tree.is_some());
+                rv = rv.right_tree.as_mut().unwrap().borrow_mut();
+            }
+            else if c == '.' {
+				return rv;
+			}
+			else {
+                panic!();
+            }
+        }
+        rv
+    }
+
+	fn assert_leaf<T: PartialEq + Debug>(node: &mut PointerWaveletTreeNode<T>, elem: &T) {
+		assert_node_elem(node, elem, elem);
+        assert!(node.left_tree.is_none());
+        assert!(node.right_tree.is_none());
+		assert_eq!(node.bits.len(), 0);
+	}
+
+	fn assert_node<T: PartialEq + Display + Debug>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>, min: &T, max: &T) {
+		assert_node_elem(node, min, max);
+		assert_bit_pattern(node, pattern);
+	}
+
+    fn assert_node_elem<T: PartialEq + Debug>(node: &PointerWaveletTreeNode<T>, min: &T, max: &T) {
+        assert_eq!(node.min_element, *min);
+        assert_eq!(node.max_element, *max);
+    }
+
+    fn assert_bit_pattern<T: Display>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>) {
         println!("Bitvec: {:?}", node.bits);
         let mut i = 0;
+        assert_eq!(node.bits.len() as usize, pattern.len());
         for bit in pattern.iter() {
             assert_eq!(node.bits.get(i), *bit == 1, "Bit {} should be {} since symbol {} is (not) in alphabet {}-{}.", i, *bit, 'x', node.min_element, node.max_element);
             i += 1;
@@ -206,7 +255,7 @@ mod tests {
 
     //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
     #[test]
-    fn creation_empty_data(){
+    fn constructor_empty_data(){
 	let mut data: Vec<u32> = Vec::new();
 	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
 	let empty_node = Option::None;
@@ -216,7 +265,7 @@ mod tests {
     //Tests if the creation with non-empty data is functional
     //specifically, if the bit vector is initialized correctly
     #[test]
-    fn creation_non_empty_data(){
+    fn constructor_non_empty_data(){
 	let mut data: Vec<u32> = Vec::new();
         data.push(4);
         data.push(2);
@@ -224,7 +273,7 @@ mod tests {
         data.push(2);
         data.push(4);
 	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-	let mut test_bits = BitVec::new_fill(false, 32);
+	let mut test_bits = BitVec::new_fill(false, 5);
 	test_bits.set_bit(0 as u64, true);
 	test_bits.set_bit(2 as u64, true);
 	test_bits.set_bit(4 as u64, true);
