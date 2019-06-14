@@ -37,7 +37,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
                     found = true;
                     break;
                 }
-            } 
+            }
             if !found {
                 alphabet.push(Clone::clone(elem));
             }
@@ -47,7 +47,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         let mut tree = PointerWaveletTree {
             alphabet: alphabet,
             root: Option::None,
-        }; 
+        };
         if size > 0 {
             tree.root = Some(PointerWaveletTree::fill_rec(&tree.alphabet[..], data));
         }
@@ -56,8 +56,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
 
     fn fill_rec(alphabet: &[T], sequence: &[T]) -> PointerWaveletTreeNode<T> {
         println!("recusrive tree fill with \n\talphabet {:?} (len: {})", alphabet, alphabet.len());
-        
-        
+
         if alphabet.len() > 1 {
             let mut bits: BitVec<u8> = BitVec::new();
 
@@ -82,7 +81,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
                     position += 1;
                 }
             }
-            
+
             PointerWaveletTreeNode {
                 left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. middle], &sequence))),
                 right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[middle ..], &sequence))),
@@ -121,18 +120,15 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
 impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
     fn access(&self, index: u32) -> Option<T>{
-    
-	return Option::None;
+        return Option::None;
     }
 
     fn rank(&self, element: T, index: u32) -> u32{
-    
-	return 42;
+        return 42;
     }
 
     fn select(&self, element: T, index: u32) -> u32{
-    
-	return 42;
+        return 42;
     }
 }
 
@@ -145,9 +141,9 @@ mod tests {
     #[test]
     fn constructor_alphabet() {
         let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
-        
+
         let tree = PointerWaveletTree::new_fill(&data);
-   
+
         assert!(tree.alphabet.len() == 6);
     }
 
@@ -156,41 +152,41 @@ mod tests {
         // aiabar a ia aiabarda
         // 14121501041014121531
         let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
-        
+
         let mut tree = PointerWaveletTree::new_fill(&data);
-   
+
         assert!(tree.root.is_some());
 
         let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0);
-		assert_node(tree_traversal(&mut tree, "."), &pattern, &0, &5);
+        assert_node(tree_traversal(&mut tree, "."), &pattern, &0, &5);
 
         let pattern = vec!(0,0,1,0,0,0,0,0,0,0,0,1,0,0);
-		assert_node(tree_traversal(&mut tree, "l"), &pattern, &0, &2);
+        assert_node(tree_traversal(&mut tree, "l"), &pattern, &0, &2);
 
         let pattern = vec!(1,1,1,0,1,0,1,0,1,1,1,1);
-		assert_node(tree_traversal(&mut tree, "ll"), &pattern, &0, &1);
+        assert_node(tree_traversal(&mut tree, "ll"), &pattern, &0, &1);
 
-		assert_leaf(tree_traversal(&mut tree, "lll"), &0);
-		assert_leaf(tree_traversal(&mut tree, "llr"), &1);
-		assert_leaf(tree_traversal(&mut tree, "lr"), &2);
+        assert_leaf(tree_traversal(&mut tree, "lll"), &0);
+        assert_leaf(tree_traversal(&mut tree, "llr"), &1);
+        assert_leaf(tree_traversal(&mut tree, "lr"), &2);
 
         let pattern = vec!(0,1,0,0,1,0);
-		assert_node(tree_traversal(&mut tree, "r"), &pattern, &3, &5);
+        assert_node(tree_traversal(&mut tree, "r"), &pattern, &3, &5);
 
         let pattern = vec!(1,1,1,0);
-		assert_node(tree_traversal(&mut tree, "rl"), &pattern, &3, &4);
+        assert_node(tree_traversal(&mut tree, "rl"), &pattern, &3, &4);
 
-		assert_leaf(tree_traversal(&mut tree, "rll"), &3);
-		assert_leaf(tree_traversal(&mut tree, "rlr"), &4);
-		assert_leaf(tree_traversal(&mut tree, "rr"), &5);
+        assert_leaf(tree_traversal(&mut tree, "rll"), &3);
+        assert_leaf(tree_traversal(&mut tree, "rlr"), &4);
+        assert_leaf(tree_traversal(&mut tree, "rr"), &5);
     }
 
     fn tree_traversal<'a, T: PartialEq + Debug>(tree: &'a mut PointerWaveletTree<T>, path: &str) -> &'a mut PointerWaveletTreeNode<T> {
 
-		use std::borrow::BorrowMut;
+        use std::borrow::BorrowMut;
 
         assert!(path.is_ascii());
-		assert!(tree.root.is_some());
+        assert!(tree.root.is_some());
         let mut rv: &mut PointerWaveletTreeNode<T> = tree.root.as_mut().unwrap();
         for c in path.chars() {
             if c == 'l' {
@@ -202,26 +198,26 @@ mod tests {
                 rv = rv.right_tree.as_mut().unwrap().borrow_mut();
             }
             else if c == '.' {
-				return rv;
-			}
-			else {
+                return rv;
+            }
+            else {
                 panic!();
             }
         }
         rv
     }
 
-	fn assert_leaf<T: PartialEq + Debug>(node: &mut PointerWaveletTreeNode<T>, elem: &T) {
-		assert_node_elem(node, elem, elem);
+    fn assert_leaf<T: PartialEq + Debug>(node: &mut PointerWaveletTreeNode<T>, elem: &T) {
+        assert_node_elem(node, elem, elem);
         assert!(node.left_tree.is_none());
         assert!(node.right_tree.is_none());
-		assert_eq!(node.bits.len(), 0);
-	}
+        assert_eq!(node.bits.len(), 0);
+    }
 
-	fn assert_node<T: PartialEq + Display + Debug>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>, min: &T, max: &T) {
-		assert_node_elem(node, min, max);
-		assert_bit_pattern(node, pattern);
-	}
+    fn assert_node<T: PartialEq + Display + Debug>(node: &mut PointerWaveletTreeNode<T>, pattern: &Vec<u32>, min: &T, max: &T) {
+        assert_node_elem(node, min, max);
+        assert_bit_pattern(node, pattern);
+    }
 
     fn assert_node_elem<T: PartialEq + Debug>(node: &PointerWaveletTreeNode<T>, min: &T, max: &T) {
         assert_eq!(node.min_element, *min);
@@ -236,13 +232,13 @@ mod tests {
             assert_eq!(node.bits.get(i), *bit == 1, "Bit {} should be {} since symbol {} is (not) in alphabet {}-{}.", i, *bit, 'x', node.min_element, node.max_element);
             i += 1;
         }
-    
+
     }
 
     //Tests the compatibility with the primitive T = u8 as a char representation
     #[test]
     fn char_compatibility(){
-	let mut data: Vec<u8> = Vec::new();
+    let mut data: Vec<u8> = Vec::new();
         data.push(b'a');
         data.push(b'b');
         data.push(b'c');
@@ -256,28 +252,28 @@ mod tests {
     //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
     #[test]
     fn constructor_empty_data(){
-	let mut data: Vec<u32> = Vec::new();
-	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-	let empty_node = Option::None;
-	assert_eq!(tree.root, empty_node);
+        let mut data: Vec<u32> = Vec::new();
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+        let empty_node = Option::None;
+        assert_eq!(tree.root, empty_node);
     }
 
     //Tests if the creation with non-empty data is functional
     //specifically, if the bit vector is initialized correctly
     #[test]
     fn constructor_non_empty_data(){
-	let mut data: Vec<u32> = Vec::new();
+    let mut data: Vec<u32> = Vec::new();
         data.push(4);
         data.push(2);
         data.push(4);
         data.push(2);
         data.push(4);
-	let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-	let mut test_bits = BitVec::new_fill(false, 5);
-	test_bits.set_bit(0 as u64, true);
-	test_bits.set_bit(2 as u64, true);
-	test_bits.set_bit(4 as u64, true);
-	assert_eq!(tree.root.unwrap().bits, test_bits);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+        let mut test_bits = BitVec::new_fill(false, 5);
+        test_bits.set_bit(0 as u64, true);
+        test_bits.set_bit(2 as u64, true);
+        test_bits.set_bit(4 as u64, true);
+        assert_eq!(tree.root.unwrap().bits, test_bits);
     }
 
     //The position index of the elements in the wavelet tree is assumed to begin at 0
