@@ -70,7 +70,12 @@ mod tests {
 
     #[test]
     fn constructor_alphabet() {
-        
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        let alphabet = vec!(0,1,2,3,4,5);
+
+        let tree = PointerlessWaveletTree::new_fill(&data);
+
+        assert_eq!(alphabet, tree.alphabet);
     }
 
     #[test]
@@ -78,7 +83,27 @@ mod tests {
         // aiabar a ia aiabarda
         // 14121501041014121531
         let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
-        
+
+        let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0,
+                           0,0,1,0,0,0,0,0,0,0,0,1,0,0,
+                           0,1,0,0,1,0,
+                           1,1,1,0,1,0,1,0,1,1,1,1,
+                           1,1,1,0);
+
+        let mut pattern_bool = Vec::new();
+        for x in pattern.iter() {
+            if *x == 0 {
+                pattern_bool.push(false);
+            }
+            else {
+                pattern_bool.push(true);
+            }
+        }
+
+        let bitvec = BitVec::from_bits(pattern_bool);
+        let tree = PointerlessWaveletTree::new_fill(&data);
+
+        assert_eq!(bitvec, tree.bits);
     }
 
     //Tests the compatibility with the primitive T = u8 as a char representation
