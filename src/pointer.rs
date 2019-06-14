@@ -59,10 +59,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         
         
         if alphabet.len() > 1 {
-            
             let mut bits: BitVec<u8> = BitVec::new();
 
-            let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
+            let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
+            let middle = 2i8.pow( exp as u32 - 1 ) as usize;
 
             let mut length = 0;
             for elem in sequence.iter() {
@@ -101,19 +101,19 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         }
     }
 
-    // pub fn level_order_bits(&self) -> BitVec<u8> {
-    //     let mut result: BitVec<u8> = BitVec::new();
-    //     let tree = &self.root;
-    //     match tree {
-    //         Option::None => {}
-    //         Option::Some(_) => {
-    //             for bit in tree.unwrap().bits.iter(){
-    //                 result.unwrap().push(bit);
-    //             }
-    //         }
-    //     }
-    //     result
-    // }
+    pub fn level_order_bits(&self) -> BitVec<u8> {
+        let mut result: BitVec<u8> = BitVec::new();
+        let tree = &self.root;
+        match tree {
+            Option::None => {}
+            Option::Some(_) => {
+                //for ( i = 0; i < tree.){
+                //    result.push(bit);
+                //}
+            }
+        }
+        result
+    }
 }
 
 
