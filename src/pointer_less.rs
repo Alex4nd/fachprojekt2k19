@@ -19,8 +19,13 @@ pub struct PointerlessWaveletTree<T> {
 
 impl<T: Ord + PartialEq + Clone + Div + Add> PointerlessWaveletTree<T> {
 
-    pub fn new_fill(data: &[T]) {
-        
+    pub fn new_fill(data: &[T])  -> PointerlessWaveletTree<T> {
+        let mut tree = PointerlessWaveletTree {
+            alphabet: Vec::new(),
+            data_size: data.len() as u32,
+            bits: BitVec::new(),
+        };
+        tree
 	}
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alphL: u32, alphR: u32) -> Option<T> {
@@ -90,13 +95,14 @@ mod tests {
         assert_eq!(content, b'd');
     }
 
-    //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
+    //Tests if the creation with empty data is functional, assuming the function is used to generate an empty alphabet, data_size of 0 and an empty bit vector
     #[test]
     fn constructor_empty_data(){
-	let mut data: Vec<u32> = Vec::new();
-	let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
-	let empty_node = Option::None;
-	assert_eq!(tree.root, empty_node);
+	    let mut data: Vec<u32> = Vec::new();
+	    let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
+	    assert_eq!(tree.alphabet, Vec::new());
+        assert_eq!(tree.data_size, 0);
+        assert_eq!(tree.bits, BitVec::new());
     }
 
     //Tests if the creation with non-empty data is functional
@@ -108,13 +114,14 @@ mod tests {
         data.push(2);
         data.push(4);
         data.push(2);
-        data.push(4);
+        data.push(1);
 	    let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
-	    let mut test_bits = BitVec::new_fill(false, 5);
+	    let mut test_bits = BitVec::new_fill(false, 8);
 	    test_bits.set_bit(0 as u64, true);
 	    test_bits.set_bit(2 as u64, true);
-	    test_bits.set_bit(4 as u64, true);
-	    assert_eq!(tree.root.unwrap().bits, test_bits);
+        test_bits.set_bit(6 as u64, true);
+        test_bits.set_bit(7 as u64, true);
+	    assert_eq!(tree.bits, test_bits);
     }
 
     //The position index of the elements in the wavelet tree is assumed to begin at 0
@@ -128,7 +135,7 @@ mod tests {
         data.push(0);
         data.push(1);
         data.push(0);
-        data.push(1);
+        data.push(2);
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
         let content = tree.access(3).unwrap();
         assert_eq!(content, 0);
