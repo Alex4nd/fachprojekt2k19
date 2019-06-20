@@ -28,17 +28,48 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerlessWaveletTree<T> {
         tree
 	}
 
-    fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alphL: u32, alphR: u32) -> Option<T> {
-        if alphL != alphR {
-            let newIndex = 0;
-            let newL = 0;
-            let newR = 0;
-            let newAlphL = 0;
-            let newAlphR = 0;
-            let result = PointerlessWaveletTree::access_rec(&self, newIndex, iteration+1, newL, newR, newAlphL, newAlphR);
+    fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
+        if alph_l != alph_r {
+            let mut new_index;
+            let mut new_l;
+            let mut new_r;
+            let mut new_alph_l;
+            let mut new_alph_r;
+
+            // FIND WHERE TO SPLIT THE ALPHABET
+            let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
+
+            if &self.bits[index as u64] == &false {
+                // BITMAP CONTAINS 0 AT POSISTION index
+                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, index, &false);
+                new_l = self.data_size + l;
+                new_r = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false) - 1;
+                new_alph_l = alph_l;
+                new_alph_r = alph_split_pos - 1;
+            } else {
+                // BITMAP CONTAINS 0 AT POSISTION index
+                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, r, &false)
+                                                     + PointerlessWaveletTree::number_of(&self, l, index, &true) ;
+                new_l = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false);
+                new_r = new_l + PointerlessWaveletTree::number_of(&self, l, r, &true) - 1;
+                new_alph_l = alph_split_pos;
+                new_alph_r = alph_r;
+            }
+            let result = PointerlessWaveletTree::access_rec(&self, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
             return result;
         }
-        return Option::Some(self.alphabet[alphL as usize].clone());
+        return Option::Some(self.alphabet[alph_l as usize].clone());
+    }
+
+    // CALCUL NUMBER OF 0's OR 1's IN INTERVALL [l..r]
+    fn number_of(&self, l: u32, r: u32, x: &bool) -> u32 {
+        let mut result = 0;
+        for i in l..r {
+            if &self.bits[i as u64] == x {
+                result += 1 ;
+            }
+        }
+        result
     }
 }
 
@@ -57,10 +88,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> WaveletTree<T> fo
     }
 
     fn select(&self, element: T, index: u32) -> u32{
-    	return 42; 
+    	return 42;
     }
 
-    
+
 }
 
 #[cfg(test)]
@@ -292,28 +323,3 @@ mod tests {
         let content: u32 = tree.select(1, 0);
     }
 }
-
-
-//    ACCESS  Beispiel: abacad
-
-//    INPUT: i=3, Alphabet = [ab|cd], l=1, r=6 (Alphabetlänge), #iteration = 1
-//    constant: n=6 (data_size), B[000101|0100|01]
-
-//    1. iteration:
-//    Alphabet[ab|cd]
-//    l=1, r=6
-//    B[3] = 0 -> linkes Kind
-
-//    //child select
-//    Alphabet(new) = [a|b]
-//    l(new) = n + l = 6 + 1 = 7
-//    r(new) = n + l + #(0)(l-r) = 6 + 1 + #(0)(1-6) = 7 + 4
-
-//    i(new) = n*#iteration + #(0)(1-i) = r + #(0)(1-3) = 6*1 + 3 = 9
-
-//    2. iteration:
-
-//    B[9] = 0 -> linkes Kind
-//    Alphabet(new) = [a]
-//    return a;
-
