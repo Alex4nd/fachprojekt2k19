@@ -65,13 +65,14 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             // let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
             // let middle = 2i8.pow( exp as u32 - 1 ) as usize;
             let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
+            println!("\tmiddle {:?}", middle);
 
             let mut length = 0;
             for elem in sequence.iter() {
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
                     if elem == alph {
-                        println!("Symbol {} at index {} is in alphabet {:?} -> {}", elem, length, alphabet, position >= middle);
+                        println!("[{}] symbol {} in alphabet {:?} -> {}", length, elem, alphabet, if position >= middle {"right"} else {"left"});
                         if position < middle {
                             bits.push(false);
                         }
@@ -85,6 +86,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 }
             }
 
+            println!("recusrive fill:\n\tleft: {:?}\n\tright: {:?}\n", &alphabet[.. middle], &alphabet[middle ..]);
             PointerWaveletTreeNode {
                 left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. middle], &sequence))),
                 right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[middle ..], &sequence))),
@@ -156,22 +158,8 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     pub fn deserialize(&self) -> Vec<T> {
         let mut result: Vec<T> = Vec::new();
         let data_size = &self.root.as_ref().unwrap().bits.len();
-        for i in 0..10 -1 {
+        for i in 0..data_size -1 {
             result.push(self.access(i as u32).unwrap().clone());
-        }
-        result
-    }
-
-    pub fn level_order_bits(&self) -> BitVec<u8> {
-        let mut result: BitVec<u8> = BitVec::new();
-        let tree = &self.root;
-        match tree {
-            Option::None => {}
-            Option::Some(_) => {
-                //for ( i = 0; i < tree.){
-                //    result.push(bit);
-                //}
-            }
         }
         result
     }
@@ -322,7 +310,8 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
     
     fn rank(&self, element: T, index: u32) -> u32 {
         if !self.alphabet.contains(&element){
-            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            //panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            return 0;
         }
         let root = &self.root;
         match root{

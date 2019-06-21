@@ -36,16 +36,39 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 alphabet.push(Clone::clone(elem));
             }
         }
-        alphabet.sort();	
+        alphabet.sort();	        
 
-	let tree_help = PointerWaveletTree::new_fill(&data);
-	
+        let bits: BitVec<u8> = PointerlessWaveletTree::initialize_bits(&alphabet, &data);
+
         let mut tree = PointerlessWaveletTree {
             alphabet: alphabet,
             data_size: data.len() as u32,
-            bits: PointerWaveletTree::level_order_bits(&tree_help),
+            bits: bits,
         };			
         tree
+    }
+
+    fn initialize_bits(alphabet: &Vec<T>, data: &[T]) -> BitVec<u8> {
+        let mut bits = BitVec::new_fill(true, data.len() as u64);
+
+        let alph_split_pos = 2_u32.pow( ((f64::log2((alphabet.len()) as f64) ).ceil() as u32) - 1);
+        for i in 0..data.len() {
+            for index in 0..alph_split_pos {
+                if data[i] == *alphabet.get(index as usize).unwrap() {
+                    bits.set_bit(i as u64, false);
+                    break;
+                }
+            }
+            
+        }
+        //first layer done, everything else follows
+        /*
+                    100101
+                   <      >
+                /nothing /nothing
+        */
+
+        bits
     }
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
