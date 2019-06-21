@@ -105,22 +105,8 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     pub fn deserialize(&self) -> Vec<T> {
         let mut result: Vec<T> = Vec::new();
         let data_size = &self.root.as_ref().unwrap().bits.len();
-        for i in 0..10 -1 {
+        for i in 0..data_size -1 {
             result.push(self.access(i as u32).unwrap().clone());
-        }
-        result
-    }
-
-    pub fn level_order_bits(&self) -> BitVec<u8> {
-        let mut result: BitVec<u8> = BitVec::new();
-        let tree = &self.root;
-        match tree {
-            Option::None => {}
-            Option::Some(_) => {
-                //for ( i = 0; i < tree.){
-                //    result.push(bit);
-                //}
-            }
         }
         result
     }
@@ -271,7 +257,8 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
     
     fn rank(&self, element: T, index: u32) -> u32 {
         if !self.alphabet.contains(&element){
-            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            //panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            return 0;
         }
         let root = &self.root;
         match root{
