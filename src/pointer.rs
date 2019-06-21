@@ -210,7 +210,7 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
                 }
             }
             else{
-                let result = rs.rank_1(index as u64).unwrap() as u32 - 1;
+                let result = rs.rank_1(index as u64).unwrap() as u32 - 1    ;
                 match &self.right_tree{
                     Some(node) => node.access(result),
                     
@@ -473,9 +473,13 @@ mod tests {
     let mut data: Vec<u8> = Vec::new();
         data.push(b'a');
         data.push(b'b');
+        data.push(b'm');
         data.push(b'c');
+        data.push(b'x');
         data.push(b'd');
         data.push(b'e');
+        data.push(b'z');
+        data.push(b'x');
         let tree: PointerWaveletTree<u8> = PointerWaveletTree::new_fill(&data[..]);
         let content = tree.access(3).unwrap();
         assert_eq!(content, b'd');
