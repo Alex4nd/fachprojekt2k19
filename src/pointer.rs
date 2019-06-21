@@ -60,8 +60,9 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         if alphabet.len() > 1 {
             let mut bits: BitVec<u8> = BitVec::new();
 
-            let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
-            let middle = 2i8.pow( exp as u32 - 1 ) as usize;
+            // let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
+            // let middle = 2i8.pow( exp as u32 - 1 ) as usize;
+            let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
 
             let mut length = 0;
             for elem in sequence.iter() {
@@ -113,9 +114,65 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         }
         result
     }
+
+
+
+    pub fn to_vec(&mut self) -> Option<Vec<T>> {
+        if self.root.is_none() {
+            return Option::None;
+        }
+
+        return Option::Some(PointerWaveletTree::to_vec_impl(self.root.as_mut().unwrap()));
+    }
+
+    fn to_vec_impl(node :&mut PointerWaveletTreeNode<T>) -> Vec<T> {
+        let mut vec = Vec::with_capacity(node.bits.len() as usize);
+
+        if node.is_leaf() {
+            vec.push(Clone::clone(&node.min_element));
+        } 
+        else { 
+        
+            let left = node.left_tree.as_mut().unwrap();
+            let right = node.right_tree.as_mut().unwrap();
+
+            let vecl = PointerWaveletTree::to_vec_impl(left);
+            let vecr = PointerWaveletTree::to_vec_impl(right);
+
+            let emptyl = left.is_leaf();
+            let emptyr = right.is_leaf();
+
+            let mut iterl = vecl.iter();
+            let mut iterr = vecr.iter(); 
+
+            for i in 0..node.bits.len() {
+                if node.bits.get(i) {
+                    if emptyr {
+                        vec.push(Clone::clone(&right.min_element));
+                    }
+                    else {
+                        vec.push(Clone::clone(iterr.next().unwrap()));
+                    }
+                }
+                else {
+                    if emptyl {
+                        vec.push(Clone::clone(&left.min_element));
+                    }
+                    else {
+                        vec.push(Clone::clone(iterl.next().unwrap()));
+                    }
+                }
+            }
+        }
+        return vec
+    }
 }
 
-
+impl<T: Ord + PartialEq> PointerWaveletTreeNode<T> {
+    fn is_leaf(&self) -> bool {
+        return self.min_element == self.max_element;
+    }
+}
 
 impl<T> WaveletTree<T> for PointerWaveletTree<T> {
 
@@ -145,6 +202,15 @@ mod tests {
         let tree = PointerWaveletTree::new_fill(&data);
 
         assert!(tree.alphabet.len() == 6);
+    }
+
+    #[test]
+    fn to_vec() {
+        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+
+        let mut tree = PointerWaveletTree::new_fill(&data);
+
+        assert_eq!(tree.to_vec(), Some(data));
     }
 
     #[test]
@@ -321,7 +387,7 @@ mod tests {
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 4);
-        assert_eq!(3, content);
+        assert_eq!(content, 3);
     }
 
     //Tests the function rank with an invalid element
@@ -336,7 +402,7 @@ mod tests {
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(42, 4);
-        assert_eq!(0, content);
+        assert_eq!(content, 0);
     }
 
     //Tests the function rank with an invalid position index, which is too high
@@ -352,7 +418,7 @@ mod tests {
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 5);
-        assert_eq!(3, content);
+        assert_eq!(content, 3);
     }
 
     //Tests the function select with valid parameters
@@ -367,7 +433,7 @@ mod tests {
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(0, 2);
-        assert_eq!(3, content);
+        assert_eq!(content, 3);
     }
 
     //Tests the function select with an invalid element that does not exist in the wavelet tree
