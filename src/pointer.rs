@@ -65,13 +65,14 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             // let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
             // let middle = 2i8.pow( exp as u32 - 1 ) as usize;
             let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
+            println!("\tmiddle {:?}", middle);
 
             let mut length = 0;
             for elem in sequence.iter() {
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
                     if elem == alph {
-                        println!("Symbol {} at index {} is in alphabet {:?} -> {}", elem, length, alphabet, position >= middle);
+                        println!("[{}] symbol {} in alphabet {:?} -> {}", length, elem, alphabet, if position >= middle {"right"} else {"left"});
                         if position < middle {
                             bits.push(false);
                         }
@@ -85,6 +86,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 }
             }
 
+            println!("recusrive fill:\n\tleft: {:?}\n\tright: {:?}\n", &alphabet[.. middle], &alphabet[middle ..]);
             PointerWaveletTreeNode {
                 left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. middle], &sequence))),
                 right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[middle ..], &sequence))),
