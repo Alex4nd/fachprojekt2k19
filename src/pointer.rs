@@ -202,7 +202,7 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
         else {
             let rs = RankSelect::new(self.bits.clone(),1);
             if self.bits[index as u64] == false{
-                let result = rs.rank_0(index as u64).unwrap() as u32;
+                let result = rs.rank_0(index as u64).unwrap() as u32 - 1;
                 match &self.left_tree{
                     Some(node) => node.access(result),
                     
@@ -210,7 +210,7 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
                 }
             }
             else{
-                let result = rs.rank_1(index as u64).unwrap() as u32;
+                let result = rs.rank_1(index as u64).unwrap() as u32 - 1;
                 match &self.right_tree{
                     Some(node) => node.access(result),
                     
