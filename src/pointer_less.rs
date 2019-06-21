@@ -1,4 +1,4 @@
-/*extern crate bv;
+extern crate bv;
 use bio::data_structures::rank_select::RankSelect;
 use bv::BitVec;
 use bv::BitsMut;
@@ -17,7 +17,7 @@ pub struct PointerlessWaveletTree<T> {
     bits: BitVec<u8>,
 }
 
-impl<T: Ord + PartialEq + Clone + Div + Add> PointerlessWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerlessWaveletTree<T> {
 
     pub fn new_fill(data: &[T])  -> PointerlessWaveletTree<T> {
         let mut tree = PointerlessWaveletTree {
@@ -71,6 +71,14 @@ impl<T: Ord + PartialEq + Clone + Div + Add> PointerlessWaveletTree<T> {
         }
         result
     }
+
+    pub fn deserialize(&self) -> Vec<T> {
+        let mut result: Vec<T> = Vec::new();
+        for i in 0..self.data_size -1 {
+            result.push(self.access(i as u32).unwrap().clone());
+        }
+        result
+    }
 }
 
 
@@ -90,8 +98,6 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> WaveletTree<T> fo
     fn select(&self, element: T, index: u32) -> u32{
     	return 42;
     }
-
-
 }
 
 #[cfg(test)]
@@ -322,5 +328,17 @@ mod tests {
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(1, 0);
     }
+
+    //Tests the deserialization
+    #[test]
+    fn deserialize_success() {
+        let mut data: Vec<u32> = Vec::new();
+        data.push(4);
+        data.push(2);
+        data.push(4);
+        data.push(2);
+        data.push(1);
+	    let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
+	    assert_eq!(tree.deserialize(), data);
+    }
 }
-*/

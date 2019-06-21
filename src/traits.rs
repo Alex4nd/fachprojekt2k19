@@ -5,7 +5,6 @@ pub trait WaveletTree<T> {
     fn rank(&self, element: T, index: u32) -> u32;
 
     fn select(&self, element: T, index: u32) -> u32;
-
 }
 
 pub trait Node<T>{

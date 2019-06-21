@@ -153,6 +153,15 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         return vec
     }
 
+    pub fn deserialize(&self) -> Vec<T> {
+        let mut result: Vec<T> = Vec::new();
+        let data_size = &self.root.as_ref().unwrap().bits.len();
+        for i in 0..10 -1 {
+            result.push(self.access(i as u32).unwrap().clone());
+        }
+        result
+    }
+
     pub fn level_order_bits(&self) -> BitVec<u8> {
         let mut result: BitVec<u8> = BitVec::new();
         let tree = &self.root;
@@ -651,6 +660,19 @@ mod tests {
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.select(1, 0);
+    }
+
+    //Tests the deserialization
+    #[test]
+    fn deserialize_success() {
+        let mut data: Vec<u32> = Vec::new();
+        data.push(4);
+        data.push(2);
+        data.push(4);
+        data.push(2);
+        data.push(1);
+	    let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+	    assert_eq!(tree.deserialize(), data);
     }
 }
 
