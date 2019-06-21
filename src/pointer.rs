@@ -261,7 +261,7 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
             
             None => panic!("Kein Wavelettree vorhanden"),
         };
-        if index > root.bits.len() as u32 {
+        if index >= root.bits.len() as u32 || index < 0{
             None
         }
         else{
@@ -270,15 +270,23 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
     }
     
     fn rank(&self, element: T, index: u32) -> u32 {
+        if !self.alphabet.contains(&element){
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
         let root = &self.root;
         match root{
             Some(root) => root.rank(element, index),
             
             None => panic!("Kein Wavelettree vorhanden"),
         }
+        
     }
 
     fn select(&self, element: T, index: u32) -> u32{
+    
+        if !self.alphabet.contains(&element){
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
         let root = &self.root;
         match root{
             Some(root) => root.select(element, index),
