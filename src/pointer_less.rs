@@ -4,12 +4,14 @@ use bv::BitVec;
 use bv::BitsMut;
 
 use std::ops::{Add, Div};
+use num_traits::cast::NumCast;
 // use std::convert::TryFrom;
 
 use std::fmt::Display;
 use std::fmt::Debug;
 
 use crate::traits::WaveletTree;
+use crate::pointer::PointerWaveletTree;
 
 pub struct PointerlessWaveletTree<T> {
     alphabet: Vec<T>,
@@ -17,16 +19,57 @@ pub struct PointerlessWaveletTree<T> {
     bits: BitVec<u8>,
 }
 
-impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerlessWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output = T> + NumCast + Copy> PointerlessWaveletTree<T> {
 
     pub fn new_fill(data: &[T])  -> PointerlessWaveletTree<T> {
+
+	let mut alphabet: Vec<T> = Vec::new();
+        for elem in data.iter() {
+            let mut found = false; 
+            for alph in alphabet.iter() {
+                if elem == alph {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                alphabet.push(Clone::clone(elem));
+            }
+        }
+        alphabet.sort();	        
+
+        let bits: BitVec<u8> = PointerlessWaveletTree::initialize_bits(&alphabet, &data);
+
         let mut tree = PointerlessWaveletTree {
-            alphabet: Vec::new(),
+            alphabet: alphabet,
             data_size: data.len() as u32,
-            bits: BitVec::new(),
-        };
+            bits: bits,
+        };			
         tree
-	}
+    }
+
+    fn initialize_bits(alphabet: &Vec<T>, data: &[T]) -> BitVec<u8> {
+        let mut bits = BitVec::new_fill(true, data.len() as u64);
+
+        let alph_split_pos = 2_u32.pow( ((f64::log2((alphabet.len()) as f64) ).ceil() as u32) - 1);
+        for i in 0..data.len() {
+            for index in 0..alph_split_pos {
+                if data[i] == *alphabet.get(index as usize).unwrap() {
+                    bits.set_bit(i as u64, false);
+                    break;
+                }
+            }
+            
+        }
+        //first layer done, everything else follows
+        /*
+                    100101
+                   <      >
+                /nothing /nothing
+        */
+
+        bits
+    }
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
         if alph_l != alph_r {
@@ -79,10 +122,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerlessWavele
         }
         result
     }
+
 }
 
-
-impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> WaveletTree<T> for PointerlessWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output = T> + NumCast + Copy> WaveletTree<T> for PointerlessWaveletTree<T> {
 
     fn access(&self, index: u32) -> Option<T>{
         if self.data_size == 0 {
