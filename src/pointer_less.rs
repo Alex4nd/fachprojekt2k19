@@ -1,4 +1,4 @@
-extern crate bv;
+/*extern crate bv;
 use bio::data_structures::rank_select::RankSelect;
 use bv::BitVec;
 use bv::BitsMut;
@@ -323,3 +323,4 @@ mod tests {
         let content: u32 = tree.select(1, 0);
     }
 }
+*/

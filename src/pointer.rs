@@ -4,13 +4,15 @@ use bv::BitVec;
 use bv::BitsMut;
 
 use std::ops::{Add, Div};
+use num_traits::cast::NumCast;
+use num_traits::cast::cast;
 // use std::convert::TryFrom;
 
 use std::fmt::Display;
 use std::fmt::Debug;
 
 use crate::traits::WaveletTree;
-
+use crate::traits::Node;
 
 pub struct PointerWaveletTree<T> {
     alphabet: Vec<T>,
@@ -26,7 +28,7 @@ struct PointerWaveletTreeNode<T> {
         bits: BitVec<u8>,
 }
 
-impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTree<T> {
+impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output = T> + NumCast + Copy> PointerWaveletTree<T> {
 
     pub fn new_fill(data: &[T]) -> PointerWaveletTree<T> {
         let mut alphabet: Vec<T> = Vec::new();
@@ -101,22 +103,6 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         }
     }
 
-    pub fn level_order_bits(&self) -> BitVec<u8> {
-        let mut result: BitVec<u8> = BitVec::new();
-        let tree = &self.root;
-        match tree {
-            Option::None => {}
-            Option::Some(_) => {
-                //for ( i = 0; i < tree.){
-                //    result.push(bit);
-                //}
-            }
-        }
-        result
-    }
-
-
-
     pub fn to_vec(&mut self) -> Option<Vec<T>> {
         if self.root.is_none() {
             return Option::None;
@@ -166,6 +152,191 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div + Add> PointerWaveletTre
         }
         return vec
     }
+
+    pub fn level_order_bits(&self) -> BitVec<u8> {
+        let mut result: BitVec<u8> = BitVec::new();
+        let tree = &self.root;
+        match tree {
+            Option::None => {}
+            Option::Some(_) => {
+                //for ( i = 0; i < tree.){
+                //    result.push(bit);
+                //}
+            }
+        }
+        result
+    }
+}
+
+impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + Copy> Node<T> for PointerWaveletTreeNode<T> {
+
+    fn isLeaf(&self) -> bool{
+        match &self.left_tree{
+            Some(_) => false,
+            
+            None => {
+                match &self.right_tree {
+                    Some(_) => false,
+                    
+                    None => true,
+                
+                }
+            },
+        }
+    }
+    
+    
+    fn access(&self, index: u32) -> T{
+        if self.min_element == self.max_element{
+            self.min_element
+        }
+        else {
+            let rs = RankSelect::new(self.bits.clone(),1);
+            if self.bits[index as u64] == false{
+                let result = rs.rank_0(index as u64).unwrap() as u32;
+                match &self.left_tree{
+                    Some(node) => node.access(result),
+                    
+                    None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                }
+            }
+            else{
+                let result = rs.rank_1(index as u64).unwrap() as u32;
+                match &self.right_tree{
+                    Some(node) => node.access(result),
+                    
+                    None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                }
+            }
+        }
+    }
+    
+
+    fn rank(&self, element: T, index: u32) -> u32 {
+        if &self.min_element == &self.max_element{
+            index
+        }
+        else{
+            let two: T = cast(2).unwrap();
+            let rs = RankSelect::new(self.bits.clone(),1);
+            if  element < (self.min_element + self.max_element) / two{
+                let result = rs.rank_0(index as u64);
+                match result{
+                
+                    Some(ind) => {
+                        match &
+                        self.left_tree {
+                            Some(node) => node.rank(element, ind as u32),
+                            
+                            None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                        }
+                    },
+                    
+                    None => panic!("Invalider Indexwert für binäres Rank"),
+                }
+            }
+            else{
+                let result = rs.rank_1(index as u64);
+                match result{
+                
+                    Some(ind) => {
+                        match &self.right_tree {
+                            Some(node) => node.rank(element, ind as u32),
+                            
+                            None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                        }
+                    },
+                    
+                    
+                    None => panic!("Invalider Indexwert für binäres Rank"),
+                }
+            }
+        }
+    }
+
+
+    fn select(&self, element: T, index: u32) -> u32{
+        if self.isLeaf(){
+            index
+        }
+        else{
+            let two: T = cast(2).unwrap();
+            if element < (self.min_element + self.max_element) / two{
+                let sel = match &self.left_tree {
+                    Some(node) => node.select(element, index),
+                    
+                    None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                    };
+                let rs = RankSelect::new(self.bits.clone(),1);
+                let result = rs.select_0(sel as u64);
+                match result{
+                
+                    Some(ind) => ind as u32,
+                    
+                    None => panic!("Invalider Indexwert für binäres Select"),
+                }
+            }
+            else{
+                let sel = match &self.right_tree {
+                    Some(node) => node.select(element, index),
+                    
+                    None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
+                };
+                let rs = RankSelect::new(self.bits.clone(),1);
+                let result = rs.select_1(sel as u64);
+                match result{
+                
+                    Some(ind) => ind as u32,
+                    
+                    None => panic!("Invalider Indexwert für binäres Select"),
+                }
+            }
+        }
+    }
+}
+
+impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + Copy> WaveletTree<T> for PointerWaveletTree<T> {
+
+    fn access(&self, index: u32) -> std::option::Option<T>{
+        let root = match &self.root{
+            Some(node) => node,
+            
+            None => panic!("Kein Wavelettree vorhanden"),
+        };
+        if index >= root.bits.len() as u32 || index < 0{
+            None
+        }
+        else{
+            Some(root.access(index))
+        }
+    }
+    
+    fn rank(&self, element: T, index: u32) -> u32 {
+        if !self.alphabet.contains(&element){
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
+        let root = &self.root;
+        match root{
+            Some(root) => root.rank(element, index),
+            
+            None => panic!("Kein Wavelettree vorhanden"),
+        }
+        
+    }
+
+    fn select(&self, element: T, index: u32) -> u32{
+    
+        if !self.alphabet.contains(&element){
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
+        let root = &self.root;
+        match root{
+            Some(root) => root.select(element, index),
+            
+            None => panic!("Kein Wavelettree vorhanden"),
+        }
+    }
+
 }
 
 impl<T: Ord + PartialEq> PointerWaveletTreeNode<T> {
@@ -174,20 +345,6 @@ impl<T: Ord + PartialEq> PointerWaveletTreeNode<T> {
     }
 }
 
-impl<T> WaveletTree<T> for PointerWaveletTree<T> {
-
-    fn access(&self, index: u32) -> Option<T>{
-        return Option::None;
-    }
-
-    fn rank(&self, element: T, index: u32) -> u32{
-        return 42;
-    }
-
-    fn select(&self, element: T, index: u32) -> u32{
-        return 42;
-    }
-}
 
 
 #[cfg(test)]
@@ -378,6 +535,11 @@ mod tests {
     //Tests the function rank with valid parameters
     //The object "1" exists 3 times up to position index 4, so the expected output is 3
     #[test]
+    fn access() {
+         //let tree: PointerWaveletTree<u32> = PointerWaveletTree::new(64);
+         //tree.access(5);
+    }
+    
     fn rank_success() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -409,6 +571,9 @@ mod tests {
     //The object "1" exists 3 times up to position index 4. Although the index is 5, the expected output is 3
     //An index that exceeds the number of objects in the wavelet tree is tolerated and treated as if it's the highest valid index
     #[test]
+    fn rank() {
+    }
+    
     fn rank_position_out_of_bound() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -424,6 +589,9 @@ mod tests {
     //Tests the function select with valid parameters
     //The second occurence of the object "0" exists at position index 3 in the wavelet tree, so the expected output is 3
     #[test]
+    fn select() {
+    }
+    
     fn select_success() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
