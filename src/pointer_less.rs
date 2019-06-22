@@ -11,7 +11,6 @@ use std::fmt::Display;
 use std::fmt::Debug;
 
 use crate::traits::WaveletTree;
-use crate::pointer::PointerWaveletTree;
 
 pub struct PointerlessWaveletTree<T> {
     alphabet: Vec<T>,
@@ -25,7 +24,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
 	let mut alphabet: Vec<T> = Vec::new();
         for elem in data.iter() {
-            let mut found = false; 
+            let mut found = false;
             for alph in alphabet.iter() {
                 if elem == alph {
                     found = true;
@@ -36,48 +35,55 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 alphabet.push(Clone::clone(elem));
             }
         }
-        alphabet.sort();	        
+        alphabet.sort();
 
-        let bits: BitVec<u8> = PointerlessWaveletTree::initialize_bits(&alphabet, &data);
+        let mut bits: BitVec<u8> = BitVec::new();
+        PointerlessWaveletTree::initialize_bits(&mut bits, data.len(), &alphabet, 1, alphabet.len() as u32,
+                                                                        &data, 1, data.len());
 
         let mut tree = PointerlessWaveletTree {
             alphabet: alphabet,
             data_size: data.len() as u32,
             bits: bits,
-        };			
+        };
         tree
     }
 
-    fn initialize_bits(alphabet: &Vec<T>, data: &[T]) -> BitVec<u8> {
-        let mut bits = BitVec::new_fill(true, data.len() as u64);
+    fn initialize_bits(bits: &mut BitVec<u8>, data_size: usize, alphabet: &Vec<T>, alph_l: u32, alph_r: u32, data: &[T], start: usize, end: usize) {
 
-        let alph_split_pos = 2_u32.pow( ((f64::log2((alphabet.len()) as f64) ).ceil() as u32) - 1);
         for i in 0..data.len() {
-            for index in 0..alph_split_pos {
-                if data[i] == *alphabet.get(index as usize).unwrap() {
+            bits.set_bit(i as u64, true);
+        }
+        let mut data_l: Vec<T> = Vec::new();
+        let mut data_r: Vec<T> = Vec::new();
+        let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
+
+        for i in start..end {
+            for j in 0..alph_split_pos-1 {
+                if data[i] == *alphabet.get(j as usize).unwrap() {
+                    data_l.push(data[i]);
                     bits.set_bit(i as u64, false);
                     break;
                 }
+                data_r.push(data[i]);
             }
-            
         }
-        //first layer done, everything else follows
-        /*
-                    100101
-                   <      >
-                /nothing /nothing
-        */
-
-        bits
-    }
+        // ZEIGE AUF DAS LINKE KIND
+        PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
+                                                        &data_l, data_size+start, data_size+start+data_l.len()-1);
+        // ZEIGE AUF DAS RECHTE KIND
+        PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
+                                                        &data_r, data_size+start+data_r.len(), data_size+end);
+}
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
+
         if alph_l != alph_r {
-            let mut new_index;
-            let mut new_l;
-            let mut new_r;
-            let mut new_alph_l;
-            let mut new_alph_r;
+            let new_index;
+            let new_l;
+            let new_r;
+            let new_alph_l;
+            let new_alph_r;
 
             // FIND WHERE TO SPLIT THE ALPHABET
             let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
