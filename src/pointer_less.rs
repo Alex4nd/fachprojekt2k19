@@ -22,63 +22,83 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     pub fn new_fill(data: &[T])  -> PointerlessWaveletTree<T> {
 
-	let mut alphabet: Vec<T> = Vec::new();
-        for elem in data.iter() {
-            let mut found = false;
-            for alph in alphabet.iter() {
-                if elem == alph {
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                alphabet.push(Clone::clone(elem));
-            }
-        }
-        alphabet.sort();
-
-        let mut bits: BitVec<u8> = BitVec::new();
-        PointerlessWaveletTree::initialize_bits(&mut bits, data.len(), &alphabet, 1, alphabet.len() as u32,
-                                                                        &data, 1, data.len());
-
+    if data.len() == 0 {
         let mut tree = PointerlessWaveletTree {
-            alphabet: alphabet,
-            data_size: data.len() as u32,
-            bits: bits,
+            alphabet: Vec::new(),
+            data_size: 0,
+            bits: BitVec::new(),
         };
         tree
+    } else {
+    	let mut alphabet: Vec<T> = Vec::new();
+            for elem in data.iter() {
+                let mut found = false;
+                for alph in alphabet.iter() {
+                    if elem == alph {
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    alphabet.push(Clone::clone(elem));
+                }
+            }
+            alphabet.sort();
+            let n = data.len() * f64::log2(alphabet.len() as f64).ceil() as usize;
+            let mut bits: BitVec<u8> = BitVec::new_fill(true, n as u64);
+            PointerlessWaveletTree::initialize_bits(&mut bits, data.len(), &alphabet, 0, alphabet.len() as u32 -1,
+                                                                            &data, 0, data.len()-1);
+
+            let mut tree = PointerlessWaveletTree {
+                alphabet: alphabet,
+                data_size: data.len() as u32,
+                bits: bits,
+            };
+            tree
+        }
     }
 
     fn initialize_bits(bits: &mut BitVec<u8>, data_size: usize, alphabet: &Vec<T>, alph_l: u32, alph_r: u32, data: &[T], start: usize, end: usize) {
 
-        for i in 0..data.len() {
-            bits.set_bit(i as u64, true);
-        }
-        let mut data_l: Vec<T> = Vec::new();
-        let mut data_r: Vec<T> = Vec::new();
-        let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
+        if alph_l < alph_r {
 
-        for i in start..end {
-            for j in 0..alph_split_pos-1 {
-                if data[i] == *alphabet.get(j as usize).unwrap() {
-                    data_l.push(data[i]);
-                    bits.set_bit(i as u64, false);
-                    break;
+            let alph_split_pos = alph_l + 2_u32.pow(((f64::log2((alph_r - alph_l+1) as f64)).ceil() as u32) - 1);
+            let mut data_l: Vec<T> = Vec::new();
+            let mut data_r: Vec<T> = Vec::new();
+            let mut i_help = 0;
+            let mut bit: bool;
+
+            for i in start..end {
+                bit = true;
+                for j in alph_l..alph_split_pos-1 {
+                    if data[i_help] == *alphabet.get(j as usize).unwrap() {
+                        bit = false;
+                        break;
+                    }
                 }
-                data_r.push(data[i]);
+                if !bit {
+                    data_l.push(data[i_help]);
+                } else {
+                    data_r.push(data[i_help]);
+                }
+                bits.set_bit(i as u64, bit);
+                i_help += 1;
             }
-        }
-        // ZEIGE AUF DAS LINKE KIND
-        PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
+
+            // ZEIGE AUF DAS LINKE KIND
+            PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
                                                         &data_l, data_size+start, data_size+start+data_l.len()-1);
-        // ZEIGE AUF DAS RECHTE KIND
-        PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
-                                                        &data_r, data_size+start+data_r.len(), data_size+end);
+            // ZEIGE AUF DAS RECHTE KIND
+            PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
+                                                        &data_r, data_size+start+data_l.len(), data_size+end);
+     } else {
+         return;
+     }
 }
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
 
-        if alph_l != alph_r {
+        if alph_l < alph_r {
             let new_index;
             let new_l;
             let new_r;
@@ -123,7 +143,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     pub fn deserialize(&self) -> Vec<T> {
         let mut result: Vec<T> = Vec::new();
-        for i in 0..self.data_size -1 {
+        for i in 0..self.data_size - 1 {
             result.push(self.access(i as u32).unwrap().clone());
         }
         result
@@ -134,10 +154,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output = T> + NumCast + Copy> WaveletTree<T> for PointerlessWaveletTree<T> {
 
     fn access(&self, index: u32) -> Option<T>{
-        if self.data_size == 0 {
+        if self.data_size == 0 || index >= self.data_size || index < 0 {
             return Option::None
         }
-        return PointerlessWaveletTree::access_rec(&self, index, 1, 1, self.data_size, 1, self.alphabet.len() as u32);
+        return PointerlessWaveletTree::access_rec(&self, index, 1, 0, self.data_size-1, 0, self.alphabet.len() as u32-1);
     }
 
     fn rank(&self, element: T, index: u32) -> u32{
@@ -168,12 +188,13 @@ mod tests {
     fn constructor_data() {
         // aiabar a ia aiabarda
         // 14121501041014121531
-        let data = vec!(1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
+        let data = vec!   (1,4,1,2,1,5,0,1,0,4,1,0,1,4,1,2,1,5,3,1);
 
-        let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0,
-                           0,0,1,0,0,0,0,0,0,0,0,1,0,0,
-                           0,1,0,0,1,0,
+        let pattern = vec!(0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,
+                           0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,
+                           0,1,0,0,1,
                            1,1,1,0,1,0,1,0,1,1,1,1,
+                           0,0,1,
                            1,1,1,0);
 
         let mut pattern_bool = Vec::new();
