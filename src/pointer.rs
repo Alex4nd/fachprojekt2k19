@@ -166,7 +166,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     pub fn deserialize(&self) -> Vec<T> {
         let mut result: Vec<T> = Vec::new();
         let data_size = &self.root.as_ref().unwrap().bits.len();
-        for i in 0..data_size -1 {
+        for i in 0..*data_size {
             result.push(self.access(i as u32).unwrap().clone());
         }
         result
