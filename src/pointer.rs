@@ -64,7 +64,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
             // let exp = f32::ceil( f32::log2(alphabet.len() as f32) ) as usize;
             // let middle = 2i8.pow( exp as u32 - 1 ) as usize;
-            let middle = f32::ceil((alphabet.len() as f32) / 2f32) as usize;
+            let middle = (alphabet[0] + alphabet[alphabet.len() - 1]) / cast(2).unwrap();
             println!("\tmiddle {:?}", middle);
 
             let mut length = 0;
@@ -72,8 +72,8 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 let mut position: usize = 0;
                 for alph in alphabet.iter() {
                     if elem == alph {
-                        println!("[{}] symbol {} in alphabet {:?} -> {}", length, elem, alphabet, if position >= middle {"right"} else {"left"});
-                        if position < middle {
+                        println!("[{}] symbol {} in alphabet {:?} -> {}", length, elem, alphabet, if *elem > middle {"right"} else {"left"});
+                        if *elem <= middle {
                             bits.push(false);
                         }
                         else {
@@ -86,10 +86,18 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 }
             }
 
-            println!("recusrive fill:\n\tleft: {:?}\n\tright: {:?}\n", &alphabet[.. middle], &alphabet[middle ..]);
+            let mut index_middle = 0;
+            for elem in alphabet.iter() {
+                if *elem > middle {
+                    break;
+                }
+                index_middle += 1;
+            }
+
+            println!("recusrive fill:\n\tleft: {:?}\n\tright: {:?}\n", &alphabet[.. index_middle], &alphabet[index_middle ..]);
             PointerWaveletTreeNode {
-                left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. middle], &sequence))),
-                right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[middle ..], &sequence))),
+                left_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[.. index_middle], &sequence))),
+                right_tree: Option::Some(Box::new(PointerWaveletTree::fill_rec(&alphabet[index_middle ..], &sequence))),
                 min_element: Clone::clone(&alphabet[0]),
                 max_element: Clone::clone(&alphabet[alphabet.len() - 1]),
                 bits, //u64::try_from(data.len()).unwrap());
@@ -471,7 +479,7 @@ mod tests {
         data.push(b'x');
         let tree: PointerWaveletTree<u8> = PointerWaveletTree::new_fill(&data[..]);
         let content = tree.access(3).unwrap();
-        assert_eq!(content, b'd');
+        assert_eq!(content, b'c');
     }
 
     //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
