@@ -46,9 +46,11 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             alphabet.sort();
             let n = data.len() * f64::log2(alphabet.len() as f64).ceil() as usize;
             let mut bits: BitVec<u8> = BitVec::new_fill(true, n as u64);
+            let mut bit_length: Vec<u8> = Vec::new(); // length of the vector = supposed length of 'bits'
             PointerlessWaveletTree::initialize_bits(&mut bits, data.len(), &alphabet, 0, alphabet.len() as u32 -1,
-                                                                            &data, 0, data.len()-1);
+                                                                            &data, 0, data.len()-1, &mut bit_length);
 
+            bits.truncate(bit_length.len() as u64);
             let mut tree = PointerlessWaveletTree {
                 alphabet: alphabet,
                 data_size: data.len() as u32,
@@ -58,8 +60,8 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         }
     }
 
-    fn initialize_bits(bits: &mut BitVec<u8>, data_size: usize, alphabet: &Vec<T>, alph_l: u32, alph_r: u32, data: &[T], start: usize, end: usize) {
-
+    fn initialize_bits(bits: &mut BitVec<u8>, data_size: usize, alphabet: &Vec<T>, alph_l: u32, alph_r: u32, data: &[T], start: usize, end: usize, bit_length: &mut Vec<u8>) {
+        print!("data_size: {}, alph_l: {}, alph_r: {}, start: {}, end: {}, bit_length: {}\n", data_size, alph_l, alph_r, start, end, bit_length.len());
         if alph_l < alph_r {
 
             let alph_split_pos = alph_l + 2_u32.pow(((f64::log2((alph_r - alph_l+1) as f64)).ceil() as u32) - 1);
@@ -67,10 +69,9 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             let mut data_r: Vec<T> = Vec::new();
             let mut i_help = 0;
             let mut bit: bool;
-
-            for i in start..end {
+            for i in start..end + 1 {
                 bit = true;
-                for j in alph_l..alph_split_pos-1 {
+                for j in alph_l..alph_split_pos {
                     if data[i_help] == *alphabet.get(j as usize).unwrap() {
                         bit = false;
                         break;
@@ -82,23 +83,25 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                     data_r.push(data[i_help]);
                 }
                 bits.set_bit(i as u64, bit);
+                bit_length.push(0);
+                
                 i_help += 1;
             }
 
             // ZEIGE AUF DAS LINKE KIND
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
-                                                        &data_l, data_size+start, data_size+start+data_l.len()-1);
+                                                        &data_l, data_size+start, data_size+start+data_l.len()-1, bit_length);
             // ZEIGE AUF DAS RECHTE KIND
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
-                                                        &data_r, data_size+start+data_l.len(), data_size+end);
+                                                        &data_r, data_size+start+data_l.len(), data_size+end, bit_length);
      } else {
          return;
      }
 }
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
-
-        if alph_l < alph_r {
+        print!("index: {}, iteration: {}, l: {}, r: {}, alph_l: {}, alph_r: {}\n", index, iteration, l, r, alph_l, alph_r);
+        if alph_l + 1 < alph_r {
             let new_index;
             let new_l;
             let new_r;
@@ -110,15 +113,15 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
             if &self.bits[index as u64] == &false {
                 // BITMAP CONTAINS 0 AT POSISTION index
-                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, index, &false);
+                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, index, &false) -1;
                 new_l = self.data_size + l;
                 new_r = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false) - 1;
                 new_alph_l = alph_l;
                 new_alph_r = alph_split_pos - 1;
             } else {
-                // BITMAP CONTAINS 0 AT POSISTION index
-                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, r, &false)
-                                                     + PointerlessWaveletTree::number_of(&self, l, index, &true) ;
+                // BITMAP CONTAINS 1 AT POSISTION index
+                new_index = self.data_size*iteration + PointerlessWaveletTree::number_of(&self, l, r, &false) -1
+                                                     + PointerlessWaveletTree::number_of(&self, l, index, &true) -1 ;
                 new_l = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false);
                 new_r = new_l + PointerlessWaveletTree::number_of(&self, l, r, &true) - 1;
                 new_alph_l = alph_split_pos;
@@ -127,13 +130,19 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             let result = PointerlessWaveletTree::access_rec(&self, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
             return result;
         }
-        return Option::Some(self.alphabet[alph_l as usize].clone());
+        if alph_l == alph_r {
+            return Option::Some(self.alphabet[alph_l as usize].clone());
+        }
+        if &self.bits[index as u64] == &false {
+            return Option::Some(self.alphabet[alph_l as usize].clone());
+        }
+        return Option::Some(self.alphabet[alph_r as usize].clone());
     }
 
     // CALCUL NUMBER OF 0's OR 1's IN INTERVALL [l..r]
     fn number_of(&self, l: u32, r: u32, x: &bool) -> u32 {
         let mut result = 0;
-        for i in l..r {
+        for i in l..r+1 {
             if &self.bits[i as u64] == x {
                 result += 1 ;
             }
@@ -143,7 +152,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     pub fn deserialize(&self) -> Vec<T> {
         let mut result: Vec<T> = Vec::new();
-        for i in 0..self.data_size - 1 {
+        for i in 0..self.data_size {
             result.push(self.access(i as u32).unwrap().clone());
         }
         result
@@ -194,8 +203,7 @@ mod tests {
                            0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,
                            0,1,0,0,1,
                            1,1,1,0,1,0,1,0,1,1,1,1,
-                           0,0,1,
-                           1,1,1,0);
+                           0,0,1);
 
         let mut pattern_bool = Vec::new();
         for x in pattern.iter() {
@@ -222,8 +230,14 @@ mod tests {
         data.push(b'c');
         data.push(b'd');
         data.push(b'e');
-        let tree: PointerlessWaveletTree<u8> = PointerlessWaveletTree::new_fill(&data[..]);
+        let tree: PointerlessWaveletTree<u8> = PointerlessWaveletTree::new_fill(&data[..]);        
+        print!("\n");                
+        for i in 0..tree.bits.len() {
+            print!("{},", tree.bits[i]);
+        }
+        print!("\n");
         let content = tree.access(3).unwrap();
+        
         assert_eq!(content, b'd');
     }
 
@@ -251,15 +265,15 @@ mod tests {
 	    let mut test_bits = BitVec::new_fill(false, 8);
 	    test_bits.set_bit(0 as u64, true);
 	    test_bits.set_bit(2 as u64, true);
+        test_bits.set_bit(5 as u64, true);
         test_bits.set_bit(6 as u64, true);
-        test_bits.set_bit(7 as u64, true);
 	    assert_eq!(tree.bits, test_bits);
     }
 
     //The position index of the elements in the wavelet tree is assumed to begin at 0
 
     //Tests the function access with valid parameters.
-    //The object at the given index 3 does exist in the wavelet-tree, so the expected output is this object
+    //The object at the given index 5 does exist in the wavelet-tree, so the expected output is this object (420)
     #[test]
     fn access_success() {
         let mut data: Vec<u32> = Vec::new();
@@ -268,9 +282,16 @@ mod tests {
         data.push(1);
         data.push(0);
         data.push(2);
+        data.push(420);
+        data.push(0);
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
+        print!("\n");                
+        for i in 0..tree.bits.len() {
+            print!("{},", tree.bits[i]);
+        }
+        print!("\n");
         let content = tree.access(3).unwrap();
-        assert_eq!(content, 0);
+        assert_eq!(tree.access(5).unwrap(), 420);
     }
 
     //Tests the function access with an invalid position

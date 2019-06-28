@@ -219,19 +219,22 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
 
     fn rank(&self, element: T, index: u32) -> u32 {
         if &self.min_element == &self.max_element{
-            index
+            index + 1
         }
         else{
             let two: T = cast(2).unwrap();
             let rs = RankSelect::new(self.bits.clone(),1);
-            if  element < (self.min_element + self.max_element) / two{
+            if  element <= (self.min_element + self.max_element) / two{
                 let result = rs.rank_0(index as u64);
                 match result{
-                
+                    Some(0) => {
+                        0
+                    },
+                    
                     Some(ind) => {
                         match &
                         self.left_tree {
-                            Some(node) => node.rank(element, ind as u32),
+                            Some(node) => node.rank(element, (ind - 1) as u32),
                             
                             None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
                         }
@@ -243,15 +246,17 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
             else{
                 let result = rs.rank_1(index as u64);
                 match result{
-                
+                    Some(0) => {
+                        0
+                    },
+                    
                     Some(ind) => {
                         match &self.right_tree {
-                            Some(node) => node.rank(element, ind as u32),
+                            Some(node) => node.rank(element, (ind - 1) as u32),
                             
                             None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
                         }
                     },
-                    
                     
                     None => panic!("Invalider Indexwert für binäres Rank"),
                 }
@@ -262,20 +267,22 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
 
     fn select(&self, element: T, index: u32) -> u32{
         if self.isLeaf(){
-            index
+            index - 1
         }
         else{
             let two: T = cast(2).unwrap();
-            if element < (self.min_element + self.max_element) / two{
+            if element <= (self.min_element + self.max_element) / two{
                 let sel = match &self.left_tree {
                     Some(node) => node.select(element, index),
                     
                     None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
                     };
                 let rs = RankSelect::new(self.bits.clone(),1);
-                let result = rs.select_0(sel as u64);
+                let result = rs.select_0((sel + 1) as u64);
+                println!("{}",result.unwrap());
                 match result{
-                
+                    Some(0) =>  0,
+                    
                     Some(ind) => ind as u32,
                     
                     None => panic!("Invalider Indexwert für binäres Select"),
@@ -283,13 +290,16 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
             }
             else{
                 let sel = match &self.right_tree {
+                
                     Some(node) => node.select(element, index),
                     
                     None => panic!("Der Baum sollte hier einen Knoten haben, hat aber keinen"),
                 };
                 let rs = RankSelect::new(self.bits.clone(),1);
-                let result = rs.select_1(sel as u64);
+                let result = rs.select_1((sel + 1) as u64);
                 match result{
+                    
+                    Some(0) => 0,
                 
                     Some(ind) => ind as u32,
                     
@@ -334,6 +344,9 @@ impl<T: Ord + PartialEq + Clone + Div<Output = T> + Add<Output = T> + NumCast + 
     
         if !self.alphabet.contains(&element){
             panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
+        if index < 1{
+            panic!("Der Index für eine Select anfrage muss größer als 1 sein!")
         }
         let root = &self.root;
         match root{
@@ -470,6 +483,7 @@ mod tests {
     let mut data: Vec<u8> = Vec::new();
         data.push(b'a');
         data.push(b'b');
+        data.push(b'b');
         data.push(b'm');
         data.push(b'c');
         data.push(b'x');
@@ -479,7 +493,13 @@ mod tests {
         data.push(b'x');
         let tree: PointerWaveletTree<u8> = PointerWaveletTree::new_fill(&data[..]);
         let content = tree.access(3).unwrap();
-        assert_eq!(content, b'c');
+        assert_eq!(content, b'm');
+        let rank = tree.rank(b'b',3);
+        let rank2 = tree.rank(b'x',7);
+        assert_eq!(rank,2);
+        assert_eq!(rank2,1);
+        let select = tree.select(b'e',0);
+        assert_eq!(select,7);
     }
 
     //Tests if the creation with empty data is functional, assuming the function is used to generate empty tree nodes
