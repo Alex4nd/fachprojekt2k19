@@ -51,11 +51,11 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                                                                             &data, 0, data.len()-1, &mut bit_length);
 
             bits.truncate(bit_length.len() as u64);
-            print!("bits: \n");                                                                                                      //////DEBUG
-            for x in 0..bits.len() {
-                print!("{}, ",bits[x]);
-            }
-            print!("\n");
+            //print!("bits: \n");                                                                                                      //////DEBUG
+            //for x in 0..bits.len() {
+            //    print!("{}, ",bits[x]);
+            //}
+            //print!("\n");
             let mut tree = PointerlessWaveletTree {
                 alphabet: alphabet,
                 data_size: data.len() as u32,
@@ -67,12 +67,12 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     fn initialize_bits(bits: &mut BitVec<u8>, data_size: usize, alphabet: &Vec<T>, alph_l: u32, alph_r: u32, data: &[T], start: usize, end: usize, bit_length: &mut Vec<u8>) {
         if alph_l < alph_r {
-
             let alph_split_pos = alph_l + 2_u32.pow(((f64::log2((alph_r - alph_l+1) as f64)).ceil() as u32) - 1);
             let mut data_l: Vec<T> = Vec::new();
             let mut data_r: Vec<T> = Vec::new();
             let mut i_help = 0;
             let mut bit: bool;
+            print!("iterationg from {} to {}\n", start, end);
             for i in start..end + 1 {
                 bit = true;
                 for j in alph_l..alph_split_pos {
@@ -91,20 +91,35 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 
                 i_help += 1;
             }
+            print!("bits: \n");                                                                                                      //////DEBUG
+            for x in 0..bits.len() {
+                print!("{}, ",bits[x]);
+            }
+            print!("\n");
+
+            let new_level;
+            // #members in the old range = #alphabet - 1
+            // one element was cut off and needs to be acknowledged to not mess up the new index
+            if (end - start + 1) as usize == alphabet.len() - 1 {
+                new_level = data_size-1;
+            }
+            else {
+                new_level = data_size;
+            }
 
             // ZEIGE AUF DAS LINKE KIND
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
-                                                        &data_l, data_size+start, data_size+start+data_l.len()-1, bit_length);
+                                                        &data_l, new_level+start, new_level+start+data_l.len()-1, bit_length);
             // ZEIGE AUF DAS RECHTE KIND
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
-                                                        &data_r, data_size+start+data_l.len(), data_size+end, bit_length);
+                                                        &data_r, new_level+start+data_l.len(), new_level+end, bit_length);
      } else {
          return;
      }
 }
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
-        print!("iteration: {}\n", iteration);
+        print!("iteration: {}\n", iteration);                                                                               //DEBUG
         if alph_l + 1 < alph_r {
             let mut new_index;
             let new_l;
@@ -142,7 +157,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 new_alph_r = alph_r;
             }
             
-            print!("search between newL:{} - newR:{}\n", new_alph_l, new_alph_r);
+            print!("search between newL:{} - newR:{}\n", new_alph_l, new_alph_r);                                                               //DEBUG
             for x in new_alph_l..new_alph_r+1 {
                 print!("{}, ",&self.alphabet[x as usize]);
             }
@@ -151,7 +166,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             let result = PointerlessWaveletTree::access_rec(&self, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
             return result;
         }
-        print!("alphL: {}, alphR: {}, index: {}\n",alph_l, alph_r, index);
+        print!("alphL: {}, alphR: {}, index: {}\n",alph_l, alph_r, index);                                                                      //DEBUG
         //print!("alphL: {}, alphR: {}, index: {}, value at index: {}\n", alph_l, alph_r, index, &self.bits[index as u64]);
         if alph_l == alph_r {
             return Option::Some(self.alphabet[alph_l as usize].clone());

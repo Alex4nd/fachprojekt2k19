@@ -498,7 +498,7 @@ mod tests {
         let rank2 = tree.rank(b'x',7);
         assert_eq!(rank,2);
         assert_eq!(rank2,1);
-        let select = tree.select(b'e',0);
+        let select = tree.select(b'e',1);
         assert_eq!(select,7);
     }
 
@@ -597,13 +597,14 @@ mod tests {
         assert_eq!(content, 0);
     }
 
-    //Tests the function rank with an invalid position index, which is too high
-    //The object "1" exists 3 times up to position index 4. Although the index is 5, the expected output is 3
-    //An index that exceeds the number of objects in the wavelet tree is tolerated and treated as if it's the highest valid index
     #[test]
     fn rank() {
     }
     
+    //Tests the function rank with an invalid position index, which is too high
+    //The object "1" exists 3 times up to position index 4, but index 5 is not defined, so it panics
+    #[test]
+    #[should_panic]
     fn rank_position_out_of_bound() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -614,14 +615,16 @@ mod tests {
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 5);
         assert_eq!(content, 3);
+        //panic goes here
+    }
+
+    #[test]
+    fn select() {
     }
 
     //Tests the function select with valid parameters
     //The second occurence of the object "0" exists at position index 3 in the wavelet tree, so the expected output is 3
     #[test]
-    fn select() {
-    }
-    
     fn select_success() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
