@@ -163,7 +163,8 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         return Option::Some(self.alphabet[alph_r as usize].clone());
     }
 
-    fn select_rec (&self, element: T, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
+        // VERSUCH VON ALEX
+/*    fn select_rec (&self, element: T, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
         print!("L:  {}, R: {}, index: {}, alph_l: {}, alph_r: {}\n", l, r, index, alph_l, alph_r);                                                                //DEBUG
 
         if alph_l + 1 < alph_r {
@@ -222,7 +223,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             return r; //just the border, not the needed element yet
         }
     }
-
+*/
     fn rank_rec(&self, element: T, index: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
 
         // FIND WHERE TO SPLIT THE ALPHABET
@@ -260,6 +261,20 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         } else {
             return PointerlessWaveletTree::number_of(&self, l, index, &true);
         }
+    }
+
+    fn select_rec(&self, element: T, occurence: u32) -> u32 {
+
+        let mut remaining: i32 = occurence as i32;
+        for i in 0..self.data_size {
+            if self.access(i).unwrap() == element {
+                remaining -= 1;
+                if remaining == 0 {
+                    return i as u32;
+                }
+            }
+        }
+        return 0;
     }
 
 
@@ -308,17 +323,19 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         return PointerlessWaveletTree::rank_rec(&self, element, index, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
     }
 
-    fn select(&self, element: T, index: u32) -> u32{
+    fn select(&self, element: T, occurence: u32) -> u32{
     	if !self.alphabet.contains(&element){
             panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
         }
-        if index < 1{
-            panic!("Der Index für eine Select anfrage muss größer als 1 sein!")
+        if occurence < 1 {
+            panic!("Das Vorkommen für eine Select anfrage muss größer als 1 sein!")
         }
-        if self.bits.len() == 0 {
-            panic!("Kein Wavelettree vorhanden");
+        if occurence > self.data_size {
+            panic!("{} kann maximal {} vorkommen!", element, self.data_size)
         }
-        return PointerlessWaveletTree::select_rec(&self, element, index, 1, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
+        // VERSUCH VON ALEX
+        //return PointerlessWaveletTree::select_rec(&self, element, index, 1, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
+        return PointerlessWaveletTree::select_rec(&self, element, occurence);
     }
 }
 
@@ -445,7 +462,7 @@ mod tests {
 
     //Tests the function rank with valid parameters
     //The object "1" exists 3 times up to position index 4, so the expected output is 3
-    // besseres Test für rank <------------------
+    // besserer Test für rank <------------------
     #[test]
     fn rank_success() {
         let mut data: Vec<u8> = Vec::new();
@@ -550,7 +567,7 @@ mod tests {
         data.push(0);
         data.push(1);
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
-        let content: u32 = tree.select(1, 4);
+        let content: u32 = tree.select(1, 6);
     }
 
     //Tests the function select with an invalid occurence of 0
