@@ -87,7 +87,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 }
                 bits.set_bit(i as u64, bit);
                 bit_length.push(0);
-                
+
                 i_help += 1;
             }
 
@@ -149,11 +149,11 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 new_alph_l = alph_split_pos;
                 new_alph_r = alph_r;
             }
- 
+
             let result = PointerlessWaveletTree::access_rec(&self, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
             return result;
         }
-        
+
         if alph_l == alph_r {
             return Option::Some(self.alphabet[alph_l as usize].clone());
         }
@@ -212,7 +212,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
         // is a leaf!
         // here we are at the bottom of the "tree". proceed here as wikipedia defines the select implementation
-        // it needs to return the index of the element we are searching for 
+        // it needs to return the index of the element we are searching for
 
         if self.alphabet[alph_l as usize].clone() == element {
             // element should be the n-th 0, search it with RankSelect.select_0 analogous to the pointer example
@@ -222,6 +222,46 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             return r; //just the border, not the needed element yet
         }
     }
+
+    fn rank_rec(&self, element: T, index: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
+
+        // FIND WHERE TO SPLIT THE ALPHABET
+        let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
+
+        if alph_l + 1 < alph_r {
+            // RESULT IS NOT IN THIS INTERVALL
+            let mut new_index;
+            let new_l;
+            let new_r;
+            let new_alph_l;
+            let new_alph_r;
+
+            if self.alphabet[alph_l as usize..alph_split_pos as usize].to_vec().contains(&element){
+                new_l = self.data_size + l;
+                new_r = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false) - 1;
+                new_alph_l = alph_l;
+                new_alph_r = alph_split_pos - 1;
+                new_index = new_l + PointerlessWaveletTree::number_of(&self, l, index, &false) - 1;
+            } else {
+                new_l = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false);
+                new_r = new_l + PointerlessWaveletTree::number_of(&self, l, r, &true) - 1;
+                new_alph_l = alph_split_pos;
+                new_alph_r = alph_r;
+                new_index = new_l + PointerlessWaveletTree::number_of(&self, l, index, &true) - 1;
+            }
+            if new_index == new_l {
+                return 0;
+            }
+            return PointerlessWaveletTree::rank_rec(&self, element, new_index, new_l, new_r, new_alph_l, new_alph_r);
+        }
+        // SO RESULT IS IN THIS INTERVALL..
+        if self.alphabet[alph_l as usize..alph_split_pos as usize].to_vec().contains(&element){
+            return PointerlessWaveletTree::number_of(&self, l, index, &false);
+        } else {
+            return PointerlessWaveletTree::number_of(&self, l, index, &true);
+        }
+    }
+
 
     // CALCUL NUMBER OF 0's OR 1's IN INTERVALL [l..r]
     fn number_of(&self, l: u32, r: u32, x: &bool) -> u32 {
@@ -259,7 +299,13 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     }
 
     fn rank(&self, element: T, index: u32) -> u32{
-    	return 42;
+        if !self.alphabet.contains(&element){
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+        }
+        if index >= self.data_size || index < 0 {
+            panic!("Index ist nicht gültig!")
+        }
+        return PointerlessWaveletTree::rank_rec(&self, element, index, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
     }
 
     fn select(&self, element: T, index: u32) -> u32{
@@ -328,9 +374,9 @@ mod tests {
         data.push(b'c');
         data.push(b'd');
         data.push(b'e');
-        let tree: PointerlessWaveletTree<u8> = PointerlessWaveletTree::new_fill(&data[..]);        
+        let tree: PointerlessWaveletTree<u8> = PointerlessWaveletTree::new_fill(&data[..]);
         let content = tree.access(3).unwrap();
-        
+
         assert_eq!(content, b'd');
     }
 
@@ -348,7 +394,7 @@ mod tests {
     //specifically, if the bit vector is initialized correctly
     #[test]
     fn constructor_non_empty_data(){
-	let mut data: Vec<u32> = Vec::new();
+	    let mut data: Vec<u32> = Vec::new();
         data.push(4);
         data.push(2);
         data.push(4);
@@ -399,22 +445,37 @@ mod tests {
 
     //Tests the function rank with valid parameters
     //The object "1" exists 3 times up to position index 4, so the expected output is 3
+    // besseres Test für rank <------------------
     #[test]
     fn rank_success() {
-        let mut data: Vec<u32> = Vec::new();
-        data.push(1);
-        data.push(0);
-        data.push(1);
-        data.push(0);
-        data.push(1);
-        let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
-        let content: u32 = tree.rank(1, 4);
-        assert_eq!(3, content);
+        let mut data: Vec<u8> = Vec::new();
+        data.push(b'a');
+        data.push(b'c');
+        data.push(b'b');
+        data.push(b'b');
+        data.push(b'a');
+        data.push(b'c');
+        data.push(b'b');
+        data.push(b'a');
+        data.push(b'a');
+        data.push(b'd');
+        data.push(b'c');
+        data.push(b'd');
+        data.push(b'a');
+        data.push(b'b');
+        let tree: PointerlessWaveletTree<u8> = PointerlessWaveletTree::new_fill(&data[..]);
+        assert_eq!(0, tree.rank(b'd', 1));
+        assert_eq!(3, tree.rank(b'a', 7));
+        assert_eq!(4, tree.rank(b'a', 8));
+        assert_eq!(2, tree.rank(b'b', 5));
+        assert_eq!(2, tree.rank(b'c', 9));
+        assert_eq!(3, tree.rank(b'c', 11));
     }
 
     //Tests the function rank with an invalid element
     //The object "42" does not exists in the wavelet tree, so the expected output is 0
     #[test]
+    #[should_panic]
     fn rank_invalid_element() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -424,13 +485,13 @@ mod tests {
         data.push(1);
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(42, 4);
-        assert_eq!(0, content);
     }
 
     //Tests the function rank with an invalid position index, which is too high
     //The object "1" exists 3 times up to position index 4. Although the index is 5, the expected output is 3
     //An index that exceeds the number of objects in the wavelet tree is tolerated and treated as if it's the highest valid index
     #[test]
+    #[should_panic]
     fn rank_position_out_of_bound() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -440,7 +501,6 @@ mod tests {
         data.push(1);
         let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
         let content: u32 = tree.rank(1, 5);
-        assert_eq!(3, content);
     }
 
     //Tests the function select with valid parameters
