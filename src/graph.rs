@@ -55,8 +55,13 @@ impl Graph {
         let mut data = Vec::new();
         let mut bits = BitVec::new();
 
-        for key in 0..max_node+1 {
+        if adjacency.get(&0).is_some() {
+            panic!("Graph shall not contain a node named 0");
+        }
+
+        for key in 1..max_node+1 {
             bits.push(true);
+            data.push(0);
             let list = adjacency.get(&key);
             if list.is_none() {
                 continue;
@@ -83,13 +88,23 @@ impl Graph {
         }
 
         let rs = RankSelect::new(self.bits.clone(), 1);
-        let k = rs.select_1(node + 1).unwrap();
+        let k = rs.select_1(node).unwrap();
 
         println!("RS select {}", k);
 
-        return self.tree.access((k - node + i - 1) as u32);
+        return self.tree.access((k + i) as u32);
     }
 
+    pub fn rev_neighbour(&self, node: u64, i: u64) -> Option<u64> {
+        if node > self.max_node {
+            return None;
+        }
+
+        let k = self.tree.select(node, i as u32);
+
+        let rs = RankSelect::new(self.bits.clone(), 1);
+        return rs.rank_1(k as u64);
+    }
 }
 
 #[cfg(test)]
@@ -105,7 +120,7 @@ mod tests {
 
         let mut g = Graph::new_tuple(&data);
 
-        let mut bits = vec!(2,3,4);
+        let mut bits = vec!(0,2,0,3,0,4,0);
         assert_eq!(g.tree.to_vec(), Some(bits));
     }
 
@@ -126,7 +141,7 @@ mod tests {
 
         let mut g = Graph::new_tuple(&data);
 
-        let mut pattern = vec!(1,1,0,1,0,1,0,1);
+        let mut pattern = vec!(1,0,1,0,1,0,1);
         assert_bit_pattern(&mut g.bits, &pattern);
     }
 
@@ -165,5 +180,21 @@ mod tests {
         assert_eq!(g.neighbour(2, 1),Some(3), "1st neighbour of node 2");
         assert_eq!(g.neighbour(3, 1),Some(4), "1st neighbour of node 3");
         assert_eq!(g.neighbour(4, 1),Some(1), "1st neighbour of node 4");
+    } 
+    
+    #[test]
+    fn rev_neighbour_cycle() {
+
+        let data = vec!((1,2), (2,3), (3,4), (4,1), (1,5), (1,6));
+
+        let mut g = Graph::new_tuple(&data);
+
+        assert_eq!(g.rev_neighbour(2, 1), Some(1), "1st reverse neighbour of node 2");
+        assert_eq!(g.rev_neighbour(3, 1), Some(2), "1st reverse neighbour of node 3");
+        assert_eq!(g.rev_neighbour(4, 1), Some(3), "1st reverse neighbour of node 4");
+        assert_eq!(g.rev_neighbour(1, 1), Some(4), "1st reverse neighbour of node 1");
+        assert_eq!(g.rev_neighbour(5, 1), Some(1), "1st reverse neighbour of node 5");
+        assert_eq!(g.rev_neighbour(6, 1), Some(1), "1st reverse neighbour of node 6");
     }  
+ 
 }
