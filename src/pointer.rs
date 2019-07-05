@@ -541,9 +541,14 @@ mod tests {
         data.push(1);
         data.push(0);
         data.push(1);
+        data.push(10);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-        let content = tree.access(3).unwrap();
-        assert_eq!(content, 0);
+        assert_eq!(tree.access(0), Some(1));
+        assert_eq!(tree.access(1), Some(0));
+        assert_eq!(tree.access(2), Some(1));
+        assert_eq!(tree.access(3), Some(0));
+        assert_eq!(tree.access(4), Some(1));
+        assert_eq!(tree.access(5), Some(10));
     }
 
     //Tests the function access with an invalid position
@@ -558,18 +563,12 @@ mod tests {
         data.push(0);
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-        let content = tree.access(5);
-        assert_eq!(content, Option::None);
+        assert_eq!(tree.access(5), Option::None);
     }
 
     //Tests the function rank with valid parameters
     //The object "1" exists 3 times up to position index 4, so the expected output is 3
     #[test]
-    fn access() {
-         //let tree: PointerWaveletTree<u32> = PointerWaveletTree::new(64);
-         //tree.access(5);
-    }
-    
     fn rank_success() {
         let mut data: Vec<u32> = Vec::new();
         data.push(1);
@@ -578,8 +577,10 @@ mod tests {
         data.push(0);
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-        let content: u32 = tree.rank(1, 4);
-        assert_eq!(content, 3);
+        assert_eq!(tree.rank(1, 2), 2);
+        assert_eq!(tree.rank(1, 4), 3);
+        assert_eq!(tree.rank(0, 2), 1);
+        assert_eq!(tree.rank(0, 4), 2);
     }
 
     //Tests the function rank with an invalid element
@@ -593,14 +594,9 @@ mod tests {
         data.push(0);
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-        let content: u32 = tree.rank(42, 4);
-        assert_eq!(content, 0);
+        assert_eq!(tree.rank(42, 4), 0);
     }
 
-    #[test]
-    fn rank() {
-    }
-    
     //Tests the function rank with an invalid position index, which is too high
     //The object "1" exists 3 times up to position index 4, but index 5 is not defined, so it panics
     #[test]
@@ -618,10 +614,6 @@ mod tests {
         //panic goes here
     }
 
-    #[test]
-    fn select() {
-    }
-
     //Tests the function select with valid parameters
     //The second occurence of the object "0" exists at position index 3 in the wavelet tree, so the expected output is 3
     #[test]
@@ -633,8 +625,11 @@ mod tests {
         data.push(0);
         data.push(1);
         let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-        let content: u32 = tree.select(0, 2);
-        assert_eq!(content, 3);
+        assert_eq!(tree.select(0, 1), 1);
+        assert_eq!(tree.select(0, 2), 3);
+        assert_eq!(tree.select(1, 1), 0);
+        assert_eq!(tree.select(1, 2), 2);
+        assert_eq!(tree.select(1, 3), 4);
     }
 
     //Tests the function select with an invalid element that does not exist in the wavelet tree
@@ -695,8 +690,8 @@ mod tests {
         data.push(4);
         data.push(2);
         data.push(1);
-	    let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
-	    assert_eq!(tree.deserialize(), data);
+        let tree: PointerWaveletTree<u32> = PointerWaveletTree::new_fill(&data[..]);
+        assert_eq!(tree.deserialize(), data);
     }
 }
 
