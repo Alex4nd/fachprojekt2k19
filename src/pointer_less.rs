@@ -426,7 +426,8 @@ mod tests {
     }
 
     //Tests the function rank with an invalid element
-    //The object "42" does not exists in the wavelet tree, so the expected output is 0
+    //The object "42" does not exists in the wavelet tree.
+    //so the expected output is a panic, to indicate non-existence of the object in the wavleet tree
     #[test]
     #[should_panic]
     fn rank_invalid_element() {
