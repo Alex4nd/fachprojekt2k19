@@ -8,7 +8,7 @@ pub trait WaveletTree<T> {
 }
 
 pub trait Node<T>{
-    fn isLeaf(&self) -> bool;
+    fn is_leaf(&self) -> bool;
     
     fn access(&self, index: u32) -> T;
 
