@@ -1,11 +1,9 @@
 extern crate bv;
-use bio::data_structures::rank_select::RankSelect;
 use bv::BitVec;
 use bv::BitsMut;
 
 use std::ops::{Add, Div};
 use num_traits::cast::NumCast;
-// use std::convert::TryFrom;
 
 use std::fmt::Display;
 use std::fmt::Debug;
@@ -23,7 +21,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     pub fn new_fill(data: &[T])  -> PointerlessWaveletTree<T> {
 
     if data.len() == 0 {
-        let mut tree = PointerlessWaveletTree {
+        let tree = PointerlessWaveletTree {
             alphabet: Vec::new(),
             data_size: 0,
             bits: BitVec::new(),
@@ -45,18 +43,18 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             }
             alphabet.sort();
             let n = data.len() * f64::log2(alphabet.len() as f64).ceil() as usize;
-            let mut bits: BitVec<u8> = BitVec::new_fill(true, n as u64);
+            let mut bits: BitVec<u8> = BitVec::new_fill(true, n as u64); // 
             let mut bit_length: Vec<u8> = Vec::new(); // length of the vector = supposed length of 'bits'
             PointerlessWaveletTree::initialize_bits(&mut bits, data.len(), &alphabet, 0, alphabet.len() as u32 -1,
                                                                             &data, 0, data.len()-1, &mut bit_length);
 
             bits.truncate(bit_length.len() as u64);
-            print!("bits: \n");                                                                                                      //////DEBUG
+            print!("bits: \n");                                                                                                      
             for x in 0..bits.len() {
                 print!("{}, ",bits[x]);
             }
             print!("\n");
-            let mut tree = PointerlessWaveletTree {
+            let tree = PointerlessWaveletTree {
                 alphabet: alphabet,
                 data_size: data.len() as u32,
                 bits: bits,
@@ -101,10 +99,10 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
                 new_level = data_size;
             }
 
-            // ZEIGE AUF DAS LINKE KIND
+            // fill left child
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_l, alph_split_pos-1,
                                                         &data_l, new_level+start, new_level+start+data_l.len()-1, bit_length);
-            // ZEIGE AUF DAS RECHTE KIND
+            // fill right child
             PointerlessWaveletTree::initialize_bits(bits, data_size, &alphabet, alph_split_pos, alph_r,
                                                         &data_r, new_level+start+data_l.len(), new_level+end, bit_length);
      } else {
@@ -114,13 +112,13 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     fn access_rec(&self, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> Option<T> {
         if alph_l + 1 < alph_r {
-            let mut new_index;
+            let new_index;
             let new_l;
             let new_r;
             let new_alph_l;
             let new_alph_r;
 
-            // FIND WHERE TO SPLIT THE ALPHABET
+            // find where to split the alphabet
             let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
 
             let new_level;
@@ -134,14 +132,14 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             }
 
             if &self.bits[index as u64] == &false {
-                // BITMAP CONTAINS 0 AT POSISTION index
+                // bitmap contains 0 at position index
                 new_index = new_level + PointerlessWaveletTree::number_of(&self, l, index, &false);
                 new_l = self.data_size + l;
                 new_r = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false) - 1;
                 new_alph_l = alph_l;
                 new_alph_r = alph_split_pos - 1;
             } else {
-                // BITMAP CONTAINS 1 AT POSISTION index
+                // bitmap contains 1 at position index
                 new_index = new_level + PointerlessWaveletTree::number_of(&self, l, r, &false)
                                       + PointerlessWaveletTree::number_of(&self, l, index, &true);
                 new_l = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false);
@@ -163,75 +161,15 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
         return Option::Some(self.alphabet[alph_r as usize].clone());
     }
 
-        // VERSUCH VON ALEX
-/*    fn select_rec (&self, element: T, index: u32, iteration: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
-        print!("L:  {}, R: {}, index: {}, alph_l: {}, alph_r: {}\n", l, r, index, alph_l, alph_r);                                                                //DEBUG
 
-        if alph_l + 1 < alph_r {
-            let mut new_index;
-            let new_l;
-            let new_r;
-            let new_alph_l;
-            let new_alph_r;
-
-            // FIND WHERE TO SPLIT THE ALPHABET
-            let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
-
-            let new_level;
-            // members in the old range = alphabet size - 1
-            // one element was cut off and needs to be acknowledged to not mess up the new index
-            if (r - l + 1) as usize == &self.alphabet.len() - 1 {
-                new_level = self.data_size*iteration-2;
-            }
-            else {
-                new_level = self.data_size*iteration-1;
-            }
-
-            if self.alphabet[alph_l as usize..alph_split_pos as usize].to_vec().contains(&element){
-                // element is in the left "tree"
-                new_index = new_level + PointerlessWaveletTree::number_of(&self, l, index, &false);
-                new_l = self.data_size + l;
-                new_r = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false) - 1;
-                new_alph_l = alph_l;
-                new_alph_r = alph_split_pos - 1;
-                let current_index = PointerlessWaveletTree::select_rec(&self, element, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
-                // its the index of the element in the left child, convert it to the corresponding index in the current tree
-                // wikipedia says how
-            } else {
-                // element is in the right "tree"
-                new_index = new_level + PointerlessWaveletTree::number_of(&self, l, r, &false)
-                                      + PointerlessWaveletTree::number_of(&self, l, index, &true);
-                new_l = self.data_size + l + PointerlessWaveletTree::number_of(&self, l, r, &false);
-                new_r = new_l + PointerlessWaveletTree::number_of(&self, l, r, &true) - 1;
-                new_alph_l = alph_split_pos;
-                new_alph_r = alph_r;
-                let current_index = PointerlessWaveletTree::select_rec(&self, element, new_index, iteration+1, new_l, new_r, new_alph_l, new_alph_r);
-                // its the index of the element in the right child, convert it to the corresponding index in the current tree
-                // wikipedia says how
-            }
-        }
-
-        // is a leaf!
-        // here we are at the bottom of the "tree". proceed here as wikipedia defines the select implementation
-        // it needs to return the index of the element we are searching for
-
-        if self.alphabet[alph_l as usize].clone() == element {
-            // element should be the n-th 0, search it with RankSelect.select_0 analogous to the pointer example
-            return l; //just the border, not the needed element yet
-        } else {
-            // element should be the n-th 1, search it with RankSelect.select_1 analogous to the pointer example
-            return r; //just the border, not the needed element yet
-        }
-    }
-*/
     fn rank_rec(&self, element: T, index: u32, l: u32, r: u32, alph_l: u32, alph_r: u32) -> u32 {
 
-        // FIND WHERE TO SPLIT THE ALPHABET
+        // find where to split the alphabet
         let alph_split_pos = alph_l + 2_u32.pow( ((f64::log2((alph_r - alph_l+1) as f64) ).ceil() as u32) - 1);
 
         if alph_l + 1 < alph_r {
-            // RESULT IS NOT IN THIS INTERVALL
-            let mut new_index;
+            // result is not in this intervall
+            let new_index;
             let new_l;
             let new_r;
             let new_alph_l;
@@ -255,7 +193,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
             }
             return PointerlessWaveletTree::rank_rec(&self, element, new_index, new_l, new_r, new_alph_l, new_alph_r);
         }
-        // SO RESULT IS IN THIS INTERVALL..
+        // so result is in this intervall..
         if self.alphabet[alph_l as usize..alph_split_pos as usize].to_vec().contains(&element){
             return PointerlessWaveletTree::number_of(&self, l, index, &false);
         } else {
@@ -278,7 +216,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
     }
 
 
-    // CALCUL NUMBER OF 0's OR 1's IN INTERVALL [l..r]
+    // returns the number of 0's or 1's in intervall [l..r]
     fn number_of(&self, l: u32, r: u32, x: &bool) -> u32 {
         let mut result = 0;
         // we dont want to go out of bound, do we?
@@ -307,7 +245,7 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output = T> + NumCast + Copy> WaveletTree<T> for PointerlessWaveletTree<T> {
 
     fn access(&self, index: u32) -> Option<T>{
-        if self.data_size == 0 || index >= self.data_size || index < 0 {
+        if self.data_size == 0 || index >= self.data_size {
             return Option::None
         }
         return PointerlessWaveletTree::access_rec(&self, index, 1, 0, self.data_size-1, 0, self.alphabet.len() as u32-1);
@@ -315,9 +253,9 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     fn rank(&self, element: T, index: u32) -> u32{
         if !self.alphabet.contains(&element){
-            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden!")
         }
-        if index >= self.data_size || index < 0 {
+        if index >= self.data_size {
             panic!("Index ist nicht gültig!")
         }
         return PointerlessWaveletTree::rank_rec(&self, element, index, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
@@ -325,16 +263,14 @@ impl<T: Ord + PartialEq + Clone + Debug + Display + Div<Output = T> + Add<Output
 
     fn select(&self, element: T, occurence: u32) -> u32{
     	if !self.alphabet.contains(&element){
-            panic!("Element nicht in Alphabet des Wavelettrees vorhanden")
+            panic!("Element nicht in Alphabet des Wavelettrees vorhanden!")
         }
         if occurence < 1 {
-            panic!("Das Vorkommen für eine Select anfrage muss größer als 1 sein!")
+            panic!("Der zweite Parameter muss größer als 1 sein!")
         }
         if occurence > self.data_size {
             panic!("{} kann maximal {} vorkommen!", element, self.data_size)
         }
-        // VERSUCH VON ALEX
-        //return PointerlessWaveletTree::select_rec(&self, element, index, 1, 0, self.data_size-1, 0, self.alphabet.len() as u32 - 1);
         return PointerlessWaveletTree::select_rec(&self, element, occurence);
     }
 }
@@ -400,7 +336,7 @@ mod tests {
     //Tests if the creation with empty data is functional, assuming the function is used to generate an empty alphabet, data_size of 0 and an empty bit vector
     #[test]
     fn constructor_empty_data(){
-	    let mut data: Vec<u32> = Vec::new();
+	    let data: Vec<u32> = Vec::new();
 	    let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
 	    assert_eq!(tree.alphabet, Vec::new());
         assert_eq!(tree.data_size, 0);
@@ -411,19 +347,20 @@ mod tests {
     //specifically, if the bit vector is initialized correctly
     #[test]
     fn constructor_non_empty_data(){
-	    let mut data: Vec<u32> = Vec::new();
+	let mut data: Vec<u32> = Vec::new();
         data.push(4);
         data.push(2);
         data.push(4);
         data.push(2);
         data.push(1);
-	    let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
-	    let mut test_bits = BitVec::new_fill(false, 8);
-	    test_bits.set_bit(0 as u64, true);
-	    test_bits.set_bit(2 as u64, true);
+	let tree: PointerlessWaveletTree<u32> = PointerlessWaveletTree::new_fill(&data[..]);
+	let mut test_bits = BitVec::new_fill(false, 8);
+	test_bits.set_bit(0 as u64, true);
+	test_bits.set_bit(2 as u64, true);
         test_bits.set_bit(5 as u64, true);
         test_bits.set_bit(6 as u64, true);
-	    assert_eq!(tree.bits, test_bits);
+	
+	assert_eq!(tree.bits, test_bits);
     }
 
     //The position index of the elements in the wavelet tree is assumed to begin at 0
@@ -461,8 +398,7 @@ mod tests {
     }
 
     //Tests the function rank with valid parameters
-    //The object "1" exists 3 times up to position index 4, so the expected output is 3
-    // besserer Test für rank <------------------
+    //The object "a" exists a times up to position index 8, so the expected output is 4
     #[test]
     fn rank_success() {
         let mut data: Vec<u8> = Vec::new();
